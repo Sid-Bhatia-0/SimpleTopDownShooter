@@ -1,0 +1,4 @@
+[deps]
+GLFW = "f7f18e0c-5ee9-5ccd-a5bf-e8befd85ed98"
+ModernGL = "66fc600b-dfda-50eb-8b99-91cfa97b1301"
+SimpleDraw = "d1acf6f4-8553-480e-80ae-3c883f0a995a"
