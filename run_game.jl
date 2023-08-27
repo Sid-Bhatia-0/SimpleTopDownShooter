@@ -102,8 +102,6 @@ function start()
     video_mode = GLFW.GetVideoMode(primary_monitor)
     image_height = Int(video_mode.height)
     image_width = Int(video_mode.width)
-    @show image_height
-    @show image_width
     window_name = "Example"
 
     # image = zeros(CT.RGBA{FPN.N0f8}, image_height, image_width)
