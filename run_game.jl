@@ -433,6 +433,7 @@ function start()
         # end
         # empty!(draw_list)
 
+        SD.draw!(image, SD.Background(), 0x00cccccc)
         SD.draw!(image, SD.FilledCircle(SD.Point(1080 ÷ 2, 1920 ÷ 2), 200), 0x000000ff)
 
         # texture_upload_start_time = get_time(reference_time)
