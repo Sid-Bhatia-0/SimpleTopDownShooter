@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "9e9be5eb6ad23bf638c4924dbf55b724897d2d13"
+project_hash = "805f64e88ea1719aa31265f626c17baf67e3be78"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -154,6 +154,14 @@ uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 git-tree-sha1 = "77b562e61b71987d9e72ddf45c22dab25579e0b9"
 uuid = "d1acf6f4-8553-480e-80ae-3c883f0a995a"
 version = "0.5.0"
+
+[[deps.SimpleIMGUI]]
+deps = ["SimpleDraw"]
+git-tree-sha1 = "52b4e1ad0f5956ce1171234fa881b461b8f5af05"
+repo-rev = "60f7316f3918a448a0e6ed3affca25667268b394"
+repo-url = "https://github.com/JuliaImGui/SimpleIMGUI.jl.git"
+uuid = "37c0dfa8-367e-4f81-95ac-b6bdb4b61673"
+version = "0.1.0"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"

@@ -3,7 +3,7 @@ import ModernGL as MGL
 # import DataStructures as DS
 import GLFW
 import SimpleDraw as SD
-# import SimpleIMGUI as SI
+import SimpleIMGUI as SI
 # import FileIO
 # import ImageIO
 # import ColorTypes as CT
@@ -87,7 +87,7 @@ include("opengl_utils.jl")
 # include("collision_detection.jl")
 # include("textures.jl")
 # include("entity_component_system.jl")
-# include("utils.jl")
+include("utils.jl")
 
 # const PIXEL_LENGTH = 2^24
 
@@ -111,12 +111,12 @@ function start()
     window = GLFW.CreateWindow(image_width, image_height, window_name, primary_monitor)
     GLFW.MakeContextCurrent(window)
 
-    # user_input_state = SI.UserInputState(
-        # SI.Cursor(SD.Point(1, 1)),
-        # fill(SI.InputButton(false, 0), 512),
-        # fill(SI.InputButton(false, 0), 8),
-        # Char[],
-    # )
+    user_input_state = SI.UserInputState(
+        SI.Cursor(SD.Point(1, 1)),
+        fill(SI.InputButton(false, 0), 512),
+        fill(SI.InputButton(false, 0), 8),
+        Char[],
+    )
 
     # function cursor_position_callback(window, x, y)::Cvoid
         # user_input_state.cursor.position = SD.Point(round(Int, y, RoundDown) + 1, round(Int, x, RoundDown) + 1)
@@ -124,19 +124,19 @@ function start()
         # return nothing
     # end
 
-    # function key_callback(window, key, scancode, action, mods)::Cvoid
-        # if key == GLFW.KEY_UNKNOWN
-            # @error "Unknown key pressed"
-        # else
+    function key_callback(window, key, scancode, action, mods)::Cvoid
+        if key == GLFW.KEY_UNKNOWN
+            @error "Unknown key pressed"
+        else
             # if key == GLFW.KEY_BACKSPACE && (action == GLFW.PRESS || action == GLFW.REPEAT)
                 # push!(user_input_state.characters, '\b')
             # end
 
-            # user_input_state.keyboard_buttons[Int(key) + 1] = update_button(user_input_state.keyboard_buttons[Int(key) + 1], action)
-        # end
+            user_input_state.keyboard_buttons[Int(key) + 1] = update_button(user_input_state.keyboard_buttons[Int(key) + 1], action)
+        end
 
-        # return nothing
-    # end
+        return nothing
+    end
 
     # function mouse_button_callback(window, button, action, mods)::Cvoid
         # user_input_state.mouse_buttons[Int(button) + 1] = update_button(user_input_state.mouse_buttons[Int(button) + 1], action)
@@ -151,7 +151,7 @@ function start()
     # end
 
     # GLFW.SetCursorPosCallback(window, cursor_position_callback)
-    # GLFW.SetKeyCallback(window, key_callback)
+    GLFW.SetKeyCallback(window, key_callback)
     # GLFW.SetMouseButtonCallback(window, mouse_button_callback)
     # GLFW.SetCharCallback(window, character_callback)
 
@@ -298,16 +298,16 @@ function start()
         # end
 
         # event_poll_start_time = get_time(reference_time)
-        # GLFW.PollEvents()
+        GLFW.PollEvents()
         # event_poll_end_time = get_time(reference_time)
         # if IS_DEBUG
             # push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
         # end
 
-        # if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
-            # GLFW.SetWindowShouldClose(window, true)
-            # break
-        # end
+        if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
+            GLFW.SetWindowShouldClose(window, true)
+            break
+        end
 
         # if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1])
             # if IS_DEBUG
