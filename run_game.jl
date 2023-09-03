@@ -20,7 +20,7 @@ mutable struct DebugInfo
     # dt_buffer::DS.CircularBuffer{Int}
     # update_time_buffer::DS.CircularBuffer{Int}
     # drawing_system_time_buffer::DS.CircularBuffer{Int}
-    # draw_time_buffer::DS.CircularBuffer{Int}
+    draw_time_buffer::DS.CircularBuffer{Int}
     # texture_upload_time_buffer::DS.CircularBuffer{Int}
     # buffer_swap_time_buffer::DS.CircularBuffer{Int}
     # sleep_time_theoretical_buffer::DS.CircularBuffer{Int}
@@ -48,8 +48,8 @@ function DebugInfo()
     # drawing_system_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
     # push!(drawing_system_time_buffer, 0)
 
-    # draw_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(draw_time_buffer, 0)
+    draw_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
+    push!(draw_time_buffer, 0)
 
     # texture_upload_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
     # push!(texture_upload_time_buffer, 0)
@@ -72,7 +72,7 @@ function DebugInfo()
         # dt_buffer,
         # update_time_buffer,
         # drawing_system_time_buffer,
-        # draw_time_buffer,
+        draw_time_buffer,
         # texture_upload_time_buffer,
         # buffer_swap_time_buffer,
         # sleep_time_theoretical_buffer,
@@ -382,7 +382,7 @@ function start()
 
             # push!(DEBUG_INFO.messages, "avg. drawing system time per frame: $(round(sum(DEBUG_INFO.drawing_system_time_buffer) / (1000 * length(DEBUG_INFO.drawing_system_time_buffer)), digits = 2)) ms")
 
-            # push!(DEBUG_INFO.messages, "avg. draw time per frame: $(round(sum(DEBUG_INFO.draw_time_buffer) / (1000 * length(DEBUG_INFO.draw_time_buffer)), digits = 2)) ms")
+            push!(DEBUG_INFO.messages, "avg. draw time per frame: $(round(sum(DEBUG_INFO.draw_time_buffer) / (1e6 * length(DEBUG_INFO.draw_time_buffer)), digits = 2)) ms")
 
             # push!(DEBUG_INFO.messages, "avg. texture upload time per frame: $(round(sum(DEBUG_INFO.texture_upload_time_buffer) / (1000 * length(DEBUG_INFO.texture_upload_time_buffer)), digits = 2)) ms")
 
@@ -420,7 +420,7 @@ function start()
         SD.draw!(image, SD.Background(), 0x00cccccc)
         SD.draw!(image, SD.FilledCircle(SD.Point(1080 ÷ 2, 1920 ÷ 2), 200), 0x000000ff)
 
-        # draw_start_time = get_time(reference_time)
+        draw_start_time = get_time(reference_time)
         for drawable in draw_list
             # if isa(drawable, ShapeDrawable)
                 # SD.draw!(image, drawable.shape, drawable.color)
@@ -428,10 +428,10 @@ function start()
                 SD.draw!(image, drawable)
             # end
         end
-        # draw_end_time = get_time(reference_time)
-        # if IS_DEBUG
-            # push!(DEBUG_INFO.draw_time_buffer, draw_end_time - draw_start_time)
-        # end
+        draw_end_time = get_time(reference_time)
+        if IS_DEBUG
+            push!(DEBUG_INFO.draw_time_buffer, draw_end_time - draw_start_time)
+        end
         empty!(draw_list)
 
         # texture_upload_start_time = get_time(reference_time)
