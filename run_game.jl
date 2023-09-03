@@ -22,7 +22,7 @@ mutable struct DebugInfo
     # drawing_system_time_buffer::DS.CircularBuffer{Int}
     draw_time_buffer::DS.CircularBuffer{Int}
     texture_upload_time_buffer::DS.CircularBuffer{Int}
-    # buffer_swap_time_buffer::DS.CircularBuffer{Int}
+    buffer_swap_time_buffer::DS.CircularBuffer{Int}
     # sleep_time_theoretical_buffer::DS.CircularBuffer{Int}
     # sleep_time_observed_buffer::DS.CircularBuffer{Int}
 end
@@ -60,8 +60,8 @@ function DebugInfo()
     # sleep_time_observed_buffer = DS.CircularBuffer{Int}(sliding_window_size)
     # push!(sleep_time_observed_buffer, 0)
 
-    # buffer_swap_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(buffer_swap_time_buffer, 0)
+    buffer_swap_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
+    push!(buffer_swap_time_buffer, 0)
 
     return DebugInfo(
         show_messages,
@@ -74,7 +74,7 @@ function DebugInfo()
         # drawing_system_time_buffer,
         draw_time_buffer,
         texture_upload_time_buffer,
-        # buffer_swap_time_buffer,
+        buffer_swap_time_buffer,
         # sleep_time_theoretical_buffer,
         # sleep_time_observed_buffer,
     )
@@ -390,7 +390,7 @@ function start()
 
             # push!(DEBUG_INFO.messages, "avg. sleep time observed: $(round(sum(DEBUG_INFO.sleep_time_observed_buffer) / (1000 * length(DEBUG_INFO.sleep_time_observed_buffer)), digits = 2)) ms")
 
-            # push!(DEBUG_INFO.messages, "avg. buffer swap time per frame: $(round(sum(DEBUG_INFO.buffer_swap_time_buffer) / (1000 * length(DEBUG_INFO.buffer_swap_time_buffer)), digits = 2)) ms")
+            push!(DEBUG_INFO.messages, "avg. buffer swap time per frame: $(round(sum(DEBUG_INFO.buffer_swap_time_buffer) / (1e6 * length(DEBUG_INFO.buffer_swap_time_buffer)), digits = 2)) ms")
 
             # push!(DEBUG_INFO.messages, "length(entities): $(length(entities))")
 
@@ -441,12 +441,12 @@ function start()
             push!(DEBUG_INFO.texture_upload_time_buffer, texture_upload_end_time - texture_upload_start_time)
         end
 
-        # buffer_swap_start_time = get_time(reference_time)
+        buffer_swap_start_time = get_time(reference_time)
         GLFW.SwapBuffers(window)
-        # buffer_swap_end_time = get_time(reference_time)
-        # if IS_DEBUG
-            # push!(DEBUG_INFO.buffer_swap_time_buffer, buffer_swap_end_time - buffer_swap_start_time)
-        # end
+        buffer_swap_end_time = get_time(reference_time)
+        if IS_DEBUG
+            push!(DEBUG_INFO.buffer_swap_time_buffer, buffer_swap_end_time - buffer_swap_start_time)
+        end
 
         SI.reset!(user_input_state)
 
