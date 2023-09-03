@@ -21,7 +21,7 @@ mutable struct DebugInfo
     # update_time_buffer::DS.CircularBuffer{Int}
     # drawing_system_time_buffer::DS.CircularBuffer{Int}
     draw_time_buffer::DS.CircularBuffer{Int}
-    # texture_upload_time_buffer::DS.CircularBuffer{Int}
+    texture_upload_time_buffer::DS.CircularBuffer{Int}
     # buffer_swap_time_buffer::DS.CircularBuffer{Int}
     # sleep_time_theoretical_buffer::DS.CircularBuffer{Int}
     # sleep_time_observed_buffer::DS.CircularBuffer{Int}
@@ -51,8 +51,8 @@ function DebugInfo()
     draw_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
     push!(draw_time_buffer, 0)
 
-    # texture_upload_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(texture_upload_time_buffer, 0)
+    texture_upload_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
+    push!(texture_upload_time_buffer, 0)
 
     # sleep_time_theoretical_buffer = DS.CircularBuffer{Int}(sliding_window_size)
     # push!(sleep_time_theoretical_buffer, 0)
@@ -73,7 +73,7 @@ function DebugInfo()
         # update_time_buffer,
         # drawing_system_time_buffer,
         draw_time_buffer,
-        # texture_upload_time_buffer,
+        texture_upload_time_buffer,
         # buffer_swap_time_buffer,
         # sleep_time_theoretical_buffer,
         # sleep_time_observed_buffer,
@@ -384,7 +384,7 @@ function start()
 
             push!(DEBUG_INFO.messages, "avg. draw time per frame: $(round(sum(DEBUG_INFO.draw_time_buffer) / (1e6 * length(DEBUG_INFO.draw_time_buffer)), digits = 2)) ms")
 
-            # push!(DEBUG_INFO.messages, "avg. texture upload time per frame: $(round(sum(DEBUG_INFO.texture_upload_time_buffer) / (1000 * length(DEBUG_INFO.texture_upload_time_buffer)), digits = 2)) ms")
+            push!(DEBUG_INFO.messages, "avg. texture upload time per frame: $(round(sum(DEBUG_INFO.texture_upload_time_buffer) / (1e6 * length(DEBUG_INFO.texture_upload_time_buffer)), digits = 2)) ms")
 
             # push!(DEBUG_INFO.messages, "avg. sleep time theoretical: $(round(sum(DEBUG_INFO.sleep_time_theoretical_buffer) / (1000 * length(DEBUG_INFO.sleep_time_theoretical_buffer)), digits = 2)) ms")
 
@@ -434,12 +434,12 @@ function start()
         end
         empty!(draw_list)
 
-        # texture_upload_start_time = get_time(reference_time)
+        texture_upload_start_time = get_time(reference_time)
         update_back_buffer(image)
-        # texture_upload_end_time = get_time(reference_time)
-        # if IS_DEBUG
-            # push!(DEBUG_INFO.texture_upload_time_buffer, texture_upload_end_time - texture_upload_start_time)
-        # end
+        texture_upload_end_time = get_time(reference_time)
+        if IS_DEBUG
+            push!(DEBUG_INFO.texture_upload_time_buffer, texture_upload_end_time - texture_upload_start_time)
+        end
 
         # buffer_swap_start_time = get_time(reference_time)
         GLFW.SwapBuffers(window)
