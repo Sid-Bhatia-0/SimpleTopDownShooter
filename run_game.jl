@@ -453,7 +453,7 @@ function start()
             # push!(DEBUG_INFO.buffer_swap_time_buffer, buffer_swap_end_time - buffer_swap_start_time)
         # end
 
-        # SI.reset!(user_input_state)
+        SI.reset!(user_input_state)
 
         frame_number = frame_number + 1
 
