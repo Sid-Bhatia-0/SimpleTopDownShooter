@@ -16,7 +16,7 @@ mutable struct DebugInfo
     # show_collision_boxes::Bool
     messages::Vector{String}
     frame_start_time_buffer::DS.CircularBuffer{Int}
-    # event_poll_time_buffer::DS.CircularBuffer{Int}
+    event_poll_time_buffer::DS.CircularBuffer{Int}
     # dt_buffer::DS.CircularBuffer{Int}
     # update_time_buffer::DS.CircularBuffer{Int}
     # drawing_system_time_buffer::DS.CircularBuffer{Int}
@@ -36,8 +36,8 @@ function DebugInfo()
     frame_start_time_buffer = DS.CircularBuffer{Int}(sliding_window_size + 1)
     push!(frame_start_time_buffer, 0)
 
-    # event_poll_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(event_poll_time_buffer, 0)
+    event_poll_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
+    push!(event_poll_time_buffer, 0)
 
     # dt_buffer = DS.CircularBuffer{Int}(sliding_window_size)
     # push!(dt_buffer, 0)
@@ -68,7 +68,7 @@ function DebugInfo()
         # show_collision_boxes,
         messages,
         frame_start_time_buffer,
-        # event_poll_time_buffer,
+        event_poll_time_buffer,
         # dt_buffer,
         # update_time_buffer,
         # drawing_system_time_buffer,
@@ -297,12 +297,12 @@ function start()
             push!(DEBUG_INFO.frame_start_time_buffer, frame_start_time)
         end
 
-        # event_poll_start_time = get_time(reference_time)
+        event_poll_start_time = get_time(reference_time)
         GLFW.PollEvents()
-        # event_poll_end_time = get_time(reference_time)
-        # if IS_DEBUG
-            # push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
-        # end
+        event_poll_end_time = get_time(reference_time)
+        if IS_DEBUG
+            push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
+        end
 
         if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
             GLFW.SetWindowShouldClose(window, true)
@@ -374,7 +374,7 @@ function start()
 
             push!(DEBUG_INFO.messages, "avg. total time per frame: $(round((last(DEBUG_INFO.frame_start_time_buffer) - first(DEBUG_INFO.frame_start_time_buffer)) / (10^6 * length(DEBUG_INFO.frame_start_time_buffer) - 1), digits = 2)) ms")
 
-            # push!(DEBUG_INFO.messages, "avg. event poll time per frame: $(round(sum(DEBUG_INFO.event_poll_time_buffer) / (1000 * length(DEBUG_INFO.event_poll_time_buffer)), digits = 2)) ms")
+            push!(DEBUG_INFO.messages, "avg. event poll time per frame: $(round(sum(DEBUG_INFO.event_poll_time_buffer) / (1e6 * length(DEBUG_INFO.event_poll_time_buffer)), digits = 2)) ms")
 
             # push!(DEBUG_INFO.messages, "avg. dt per frame: $(round(sum(DEBUG_INFO.dt_buffer) / (1000 * length(DEBUG_INFO.dt_buffer)), digits = 2)) ms")
 
