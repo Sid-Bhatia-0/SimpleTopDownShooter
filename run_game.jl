@@ -399,9 +399,6 @@ function start()
             # end
 
             if DEBUG_INFO.show_messages
-                @show frame_number
-                @show user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1]
-                @show SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1])
                 for (j, text) in enumerate(DEBUG_INFO.messages)
                     if isone(j)
                         alignment = SI.UP1_LEFT1
@@ -424,8 +421,6 @@ function start()
         SD.draw!(image, SD.FilledCircle(SD.Point(1080 ÷ 2, 1920 ÷ 2), 200), 0x000000ff)
 
         # draw_start_time = get_time(reference_time)
-        # @show frame_number
-        # @show length(draw_list)
         for drawable in draw_list
             # if isa(drawable, ShapeDrawable)
                 # SD.draw!(image, drawable.shape, drawable.color)
