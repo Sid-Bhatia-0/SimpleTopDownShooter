@@ -470,14 +470,14 @@ function start()
         # end
     end
 
-    # MGL.glDeleteVertexArrays(1, VAO_ref)
-    # MGL.glDeleteBuffers(1, VBO_ref)
-    # MGL.glDeleteBuffers(1, EBO_ref)
-    # MGL.glDeleteProgram(shader_program)
+    MGL.glDeleteVertexArrays(1, VAO_ref)
+    MGL.glDeleteBuffers(1, VBO_ref)
+    MGL.glDeleteBuffers(1, EBO_ref)
+    MGL.glDeleteProgram(shader_program)
 
-    # GLFW.DestroyWindow(window)
+    GLFW.DestroyWindow(window)
 
-    # return nothing
+    return nothing
 end
 
 start()
