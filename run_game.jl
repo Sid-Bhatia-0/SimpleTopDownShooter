@@ -125,7 +125,9 @@ function start()
     render_region_width = f * render_region_aspect_ratio.num
 
     window_frame_buffer = zeros(UInt32, window_height, window_width) # 0xAABBGGRR
-    render_region = window_frame_buffer
+    top_padding = (window_height - render_region_height) ÷ 2
+    left_padding = (window_width - render_region_width) ÷ 2
+    render_region = @view window_frame_buffer[top_padding + 1 : top_padding + render_region_height, left_padding + 1 : left_padding + render_region_width]
 
     user_input_state = SI.UserInputState(
         SI.Cursor(SD.Point(1, 1)),
