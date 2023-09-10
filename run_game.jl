@@ -110,16 +110,19 @@ function start()
         window = GLFW.CreateWindow(window_width, window_height, window_name, primary_monitor)
         GLFW.MakeContextCurrent(window)
     else
-        window_height = 360
-        window_width = 640
+        window_height = 480
+        window_width = 650
 
         setup_window_hints()
         window = GLFW.CreateWindow(window_width, window_height, window_name)
         GLFW.MakeContextCurrent(window)
     end
 
-    image_height = window_height
-    image_width = window_width
+    render_region_aspect_ratio = 16 // 9
+
+    f = min(window_height ÷ render_region_aspect_ratio.den, window_width ÷ render_region_aspect_ratio.num)
+    image_height = f * render_region_aspect_ratio.den
+    image_width = f * render_region_aspect_ratio.num
 
     # image = zeros(CT.RGBA{FPN.N0f8}, image_height, image_width)
     image = zeros(UInt32, image_height, image_width) # 0xAABBGGRR
