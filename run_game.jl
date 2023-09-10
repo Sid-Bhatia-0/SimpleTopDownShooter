@@ -124,7 +124,6 @@ function start()
     render_region_height = f * render_region_aspect_ratio.den
     render_region_width = f * render_region_aspect_ratio.num
 
-    # image = zeros(CT.RGBA{FPN.N0f8}, render_region_height, render_region_width)
     image = zeros(UInt32, render_region_height, render_region_width) # 0xAABBGGRR
 
     user_input_state = SI.UserInputState(
