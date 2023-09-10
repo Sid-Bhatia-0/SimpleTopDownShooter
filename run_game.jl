@@ -121,11 +121,11 @@ function start()
     render_region_aspect_ratio = 16 // 9
 
     f = min(window_height ÷ render_region_aspect_ratio.den, window_width ÷ render_region_aspect_ratio.num)
-    image_height = f * render_region_aspect_ratio.den
-    image_width = f * render_region_aspect_ratio.num
+    render_region_height = f * render_region_aspect_ratio.den
+    render_region_width = f * render_region_aspect_ratio.num
 
-    # image = zeros(CT.RGBA{FPN.N0f8}, image_height, image_width)
-    image = zeros(UInt32, image_height, image_width) # 0xAABBGGRR
+    # image = zeros(CT.RGBA{FPN.N0f8}, render_region_height, render_region_width)
+    image = zeros(UInt32, render_region_height, render_region_width) # 0xAABBGGRR
 
     user_input_state = SI.UserInputState(
         SI.Cursor(SD.Point(1, 1)),
@@ -171,7 +171,7 @@ function start()
     # GLFW.SetMouseButtonCallback(window, mouse_button_callback)
     # GLFW.SetCharCallback(window, character_callback)
 
-    MGL.glViewport(0, 0, image_width, image_height)
+    MGL.glViewport(0, 0, render_region_width, render_region_height)
 
     vertex_shader = setup_vertex_shader()
     fragment_shader = setup_fragment_shader()
@@ -188,7 +188,7 @@ function start()
 
     user_interaction_state = SI.UserInteractionState(SI.NULL_WIDGET, SI.NULL_WIDGET, SI.NULL_WIDGET)
 
-    layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), image_height, image_width))
+    layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
 
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
@@ -362,7 +362,7 @@ function start()
             # entities[2] = (Accessors.@set player.velocity.y = NULL_VELOCITY.y)
         # end
 
-        layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), image_height, image_width)
+        layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width)
 
         # dt = previous_frame_time
         # if IS_DEBUG
@@ -434,7 +434,7 @@ function start()
         end
 
         SD.draw!(image, SD.Background(), 0x00cccccc)
-        SD.draw!(image, SD.FilledCircle(SD.Point(image_height ÷ 2, image_width ÷ 2), image_height ÷ 10), 0x000000ff)
+        SD.draw!(image, SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10), 0x000000ff)
 
         draw_start_time = get_time(reference_time)
         for drawable in draw_list
