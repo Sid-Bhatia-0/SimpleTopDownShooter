@@ -110,8 +110,8 @@ function start()
         window = GLFW.CreateWindow(window_width, window_height, window_name, primary_monitor)
         GLFW.MakeContextCurrent(window)
     else
-        window_height = 480
-        window_width = 650
+        window_height = 550
+        window_width = 910
 
         setup_window_hints()
         window = GLFW.CreateWindow(window_width, window_height, window_name)
