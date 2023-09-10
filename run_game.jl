@@ -10,6 +10,7 @@ import SimpleIMGUI as SI
 # import FixedPointNumbers as FPN
 
 const IS_DEBUG = true
+const IS_FULLSCREEN = false
 
 mutable struct DebugInfo
     show_messages::Bool
@@ -98,18 +99,38 @@ include("utils.jl")
 # get_block(vec::Vec, block_length) = Vec(get_block(vec.x, block_length), get_block(vec.y, block_length))
 
 function start()
-    primary_monitor = GLFW.GetPrimaryMonitor()
-    video_mode = GLFW.GetVideoMode(primary_monitor)
-    image_height = Int(video_mode.height)
-    image_width = Int(video_mode.width)
     window_name = "Example"
+    if IS_FULLSCREEN
+        primary_monitor = GLFW.GetPrimaryMonitor()
+        video_mode = GLFW.GetVideoMode(primary_monitor)
+        window_height = Int(video_mode.height)
+        window_width = Int(video_mode.width)
 
-    # image = zeros(CT.RGBA{FPN.N0f8}, image_height, image_width)
-    image = zeros(UInt32, image_height, image_width) # 0xAABBGGRR
+        setup_window_hints()
+        window = GLFW.CreateWindow(window_width, window_height, window_name, primary_monitor)
+        GLFW.MakeContextCurrent(window)
+    else
+        window_height = 550
+        window_width = 910
 
-    setup_window_hints()
-    window = GLFW.CreateWindow(image_width, image_height, window_name, primary_monitor)
-    GLFW.MakeContextCurrent(window)
+        setup_window_hints()
+        window = GLFW.CreateWindow(window_width, window_height, window_name)
+        GLFW.MakeContextCurrent(window)
+    end
+
+    @assert window_height >= 360
+    @assert window_width >= 640
+
+    render_region_aspect_ratio = 16 // 9
+
+    f = min(window_height ÷ render_region_aspect_ratio.den, window_width ÷ render_region_aspect_ratio.num)
+    render_region_height = f * render_region_aspect_ratio.den
+    render_region_width = f * render_region_aspect_ratio.num
+
+    window_frame_buffer = zeros(UInt32, window_height, window_width) # 0xAABBGGRR
+    top_padding = (window_height - render_region_height) ÷ 2
+    left_padding = (window_width - render_region_width) ÷ 2
+    render_region = @view window_frame_buffer[top_padding + 1 : top_padding + render_region_height, left_padding + 1 : left_padding + render_region_width]
 
     user_input_state = SI.UserInputState(
         SI.Cursor(SD.Point(1, 1)),
@@ -155,7 +176,7 @@ function start()
     # GLFW.SetMouseButtonCallback(window, mouse_button_callback)
     # GLFW.SetCharCallback(window, character_callback)
 
-    MGL.glViewport(0, 0, image_width, image_height)
+    MGL.glViewport(0, 0, window_width, window_height)
 
     vertex_shader = setup_vertex_shader()
     fragment_shader = setup_fragment_shader()
@@ -163,7 +184,7 @@ function start()
 
     VAO_ref, VBO_ref, EBO_ref = setup_vao_vbo_ebo()
 
-    texture_ref = setup_texture(image)
+    texture_ref = setup_texture(window_frame_buffer)
 
     MGL.glUseProgram(shader_program)
     MGL.glBindVertexArray(VAO_ref[])
@@ -172,7 +193,7 @@ function start()
 
     user_interaction_state = SI.UserInteractionState(SI.NULL_WIDGET, SI.NULL_WIDGET, SI.NULL_WIDGET)
 
-    layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), image_height, image_width))
+    layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
 
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
@@ -346,7 +367,7 @@ function start()
             # entities[2] = (Accessors.@set player.velocity.y = NULL_VELOCITY.y)
         # end
 
-        layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), image_height, image_width)
+        layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width)
 
         # dt = previous_frame_time
         # if IS_DEBUG
@@ -417,15 +438,15 @@ function start()
             end
         end
 
-        SD.draw!(image, SD.Background(), 0x00cccccc)
-        SD.draw!(image, SD.FilledCircle(SD.Point(1080 ÷ 2, 1920 ÷ 2), 200), 0x000000ff)
+        SD.draw!(render_region, SD.Background(), 0x00cccccc)
+        SD.draw!(render_region, SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10), 0x000000ff)
 
         draw_start_time = get_time(reference_time)
         for drawable in draw_list
             # if isa(drawable, ShapeDrawable)
-                # SD.draw!(image, drawable.shape, drawable.color)
+                # SD.draw!(render_region, drawable.shape, drawable.color)
             # else
-                SD.draw!(image, drawable)
+                SD.draw!(render_region, drawable)
             # end
         end
         draw_end_time = get_time(reference_time)
@@ -435,7 +456,7 @@ function start()
         empty!(draw_list)
 
         texture_upload_start_time = get_time(reference_time)
-        update_back_buffer(image)
+        update_back_buffer(window_frame_buffer)
         texture_upload_end_time = get_time(reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.texture_upload_time_buffer, texture_upload_end_time - texture_upload_start_time)
