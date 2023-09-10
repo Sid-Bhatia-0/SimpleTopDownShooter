@@ -10,6 +10,7 @@ import SimpleIMGUI as SI
 # import FixedPointNumbers as FPN
 
 const IS_DEBUG = true
+const IS_FULLSCREEN = false
 
 mutable struct DebugInfo
     show_messages::Bool
@@ -98,18 +99,27 @@ include("utils.jl")
 # get_block(vec::Vec, block_length) = Vec(get_block(vec.x, block_length), get_block(vec.y, block_length))
 
 function start()
-    primary_monitor = GLFW.GetPrimaryMonitor()
-    video_mode = GLFW.GetVideoMode(primary_monitor)
-    image_height = Int(video_mode.height)
-    image_width = Int(video_mode.width)
     window_name = "Example"
+    if IS_FULLSCREEN
+        primary_monitor = GLFW.GetPrimaryMonitor()
+        video_mode = GLFW.GetVideoMode(primary_monitor)
+        image_height = Int(video_mode.height)
+        image_width = Int(video_mode.width)
+
+        setup_window_hints()
+        window = GLFW.CreateWindow(image_width, image_height, window_name, primary_monitor)
+        GLFW.MakeContextCurrent(window)
+    else
+        image_height = 360
+        image_width = 640
+
+        setup_window_hints()
+        window = GLFW.CreateWindow(image_width, image_height, window_name)
+        GLFW.MakeContextCurrent(window)
+    end
 
     # image = zeros(CT.RGBA{FPN.N0f8}, image_height, image_width)
     image = zeros(UInt32, image_height, image_width) # 0xAABBGGRR
-
-    setup_window_hints()
-    window = GLFW.CreateWindow(image_width, image_height, window_name, primary_monitor)
-    GLFW.MakeContextCurrent(window)
 
     user_input_state = SI.UserInputState(
         SI.Cursor(SD.Point(1, 1)),
