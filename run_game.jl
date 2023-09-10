@@ -124,7 +124,8 @@ function start()
     render_region_height = f * render_region_aspect_ratio.den
     render_region_width = f * render_region_aspect_ratio.num
 
-    image = zeros(UInt32, render_region_height, render_region_width) # 0xAABBGGRR
+    window_frame_buffer = zeros(UInt32, render_region_height, render_region_width) # 0xAABBGGRR
+    render_region = window_frame_buffer
 
     user_input_state = SI.UserInputState(
         SI.Cursor(SD.Point(1, 1)),
@@ -178,7 +179,7 @@ function start()
 
     VAO_ref, VBO_ref, EBO_ref = setup_vao_vbo_ebo()
 
-    texture_ref = setup_texture(image)
+    texture_ref = setup_texture(window_frame_buffer)
 
     MGL.glUseProgram(shader_program)
     MGL.glBindVertexArray(VAO_ref[])
@@ -432,15 +433,15 @@ function start()
             end
         end
 
-        SD.draw!(image, SD.Background(), 0x00cccccc)
-        SD.draw!(image, SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10), 0x000000ff)
+        SD.draw!(render_region, SD.Background(), 0x00cccccc)
+        SD.draw!(render_region, SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10), 0x000000ff)
 
         draw_start_time = get_time(reference_time)
         for drawable in draw_list
             # if isa(drawable, ShapeDrawable)
-                # SD.draw!(image, drawable.shape, drawable.color)
+                # SD.draw!(render_region, drawable.shape, drawable.color)
             # else
-                SD.draw!(image, drawable)
+                SD.draw!(render_region, drawable)
             # end
         end
         draw_end_time = get_time(reference_time)
@@ -450,7 +451,7 @@ function start()
         empty!(draw_list)
 
         texture_upload_start_time = get_time(reference_time)
-        update_back_buffer(image)
+        update_back_buffer(window_frame_buffer)
         texture_upload_end_time = get_time(reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.texture_upload_time_buffer, texture_upload_end_time - texture_upload_start_time)
