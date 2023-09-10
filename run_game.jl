@@ -428,7 +428,7 @@ function start()
         end
 
         SD.draw!(image, SD.Background(), 0x00cccccc)
-        SD.draw!(image, SD.FilledCircle(SD.Point(1080 ÷ 2, 1920 ÷ 2), 200), 0x000000ff)
+        SD.draw!(image, SD.FilledCircle(SD.Point(image_height ÷ 2, image_width ÷ 2), image_height ÷ 10), 0x000000ff)
 
         draw_start_time = get_time(reference_time)
         for drawable in draw_list
