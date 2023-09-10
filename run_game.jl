@@ -124,7 +124,7 @@ function start()
     render_region_height = f * render_region_aspect_ratio.den
     render_region_width = f * render_region_aspect_ratio.num
 
-    window_frame_buffer = zeros(UInt32, render_region_height, render_region_width) # 0xAABBGGRR
+    window_frame_buffer = zeros(UInt32, window_height, window_width) # 0xAABBGGRR
     render_region = window_frame_buffer
 
     user_input_state = SI.UserInputState(
@@ -171,7 +171,7 @@ function start()
     # GLFW.SetMouseButtonCallback(window, mouse_button_callback)
     # GLFW.SetCharCallback(window, character_callback)
 
-    MGL.glViewport(0, 0, render_region_width, render_region_height)
+    MGL.glViewport(0, 0, window_width, window_height)
 
     vertex_shader = setup_vertex_shader()
     fragment_shader = setup_fragment_shader()
