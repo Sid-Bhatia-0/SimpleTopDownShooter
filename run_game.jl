@@ -118,6 +118,9 @@ function start()
         GLFW.MakeContextCurrent(window)
     end
 
+    @assert window_height >= 360
+    @assert window_width >= 640
+
     render_region_aspect_ratio = 16 // 9
 
     f = min(window_height ÷ render_region_aspect_ratio.den, window_width ÷ render_region_aspect_ratio.num)
