@@ -198,9 +198,12 @@ function start()
 
     # player
     player = Player(SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10))
+    reference_circle = SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10)
 
     # camera
-    camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -render_region_height ÷ 2, -render_region_width ÷ 2), render_region_height, render_region_width))
+    camera_height = render_region_height ÷ 2
+    camera_width = render_region_width ÷ 2
+    camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
 
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
@@ -359,7 +362,7 @@ function start()
             player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j + 2), player.drawable.diameter))
         end
 
-        camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -render_region_height ÷ 2, -render_region_width ÷ 2), render_region_height, render_region_width))
+        camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
 
         # if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_C) + 1])
             # if IS_DEBUG
@@ -480,6 +483,9 @@ function start()
         # SD.draw!(render_region, player.drawable, 0x000000ff)
         player_drawable_wrt_render_region = get_render_region_view(camera, render_region_height, render_region_width, player.drawable)
         SD.draw!(render_region, player_drawable_wrt_render_region, 0x000000ff)
+
+        reference_circle_wrt_render_region = get_render_region_view(camera, render_region_height, render_region_width, reference_circle)
+        SD.draw!(render_region, reference_circle_wrt_render_region, 0x00ff0000)
 
         draw_start_time = get_time(reference_time)
         for drawable in draw_list
