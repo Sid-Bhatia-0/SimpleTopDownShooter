@@ -445,6 +445,8 @@ function start()
             push!(DEBUG_INFO.messages, "camera height: $(camera.rectangle.height)")
             push!(DEBUG_INFO.messages, "camera width: $(camera.rectangle.width)")
 
+            push!(DEBUG_INFO.messages, "player position wrt camera: $(get_camera_view(camera, player.drawable).position)")
+
             # push!(DEBUG_INFO.messages, "length(entities): $(length(entities))")
 
             # for (i, entity) in enumerate(entities)
