@@ -84,6 +84,7 @@ end
 const DEBUG_INFO = DebugInfo()
 
 include("opengl_utils.jl")
+include("game_state.jl")
 # include("colors.jl")
 # include("collision_detection.jl")
 # include("textures.jl")
@@ -194,6 +195,9 @@ function start()
     user_interaction_state = SI.UserInteractionState(SI.NULL_WIDGET, SI.NULL_WIDGET, SI.NULL_WIDGET)
 
     layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
+
+    # player
+    player = Player(SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10))
 
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
@@ -439,7 +443,7 @@ function start()
         end
 
         SD.draw!(render_region, SD.Background(), 0x00cccccc)
-        SD.draw!(render_region, SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10), 0x000000ff)
+        SD.draw!(render_region, player.drawable, 0x000000ff)
 
         draw_start_time = get_time(reference_time)
         for drawable in draw_list
