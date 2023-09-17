@@ -340,6 +340,22 @@ function start()
             end
         end
 
+        if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
+            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i - 2, player.drawable.position.j), player.drawable.diameter))
+        end
+
+        if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
+            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i + 2, player.drawable.position.j), player.drawable.diameter))
+        end
+
+        if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
+            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j - 2), player.drawable.diameter))
+        end
+
+        if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
+            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j + 2), player.drawable.diameter))
+        end
+
         # if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_C) + 1])
             # if IS_DEBUG
                 # DEBUG_INFO.show_collision_boxes = !DEBUG_INFO.show_collision_boxes
