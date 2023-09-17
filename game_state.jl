@@ -8,7 +8,7 @@ struct Camera
     rectangle::SD.Rectangle{Int}
 end
 
-function get_camera_view(camera, shape)
+function get_shape_wrt_camera(camera, shape)
     I = typeof(camera.rectangle.position.i)
     return SD.move(shape, -camera.rectangle.position.i + one(I), -camera.rectangle.position.j + one(I))
 end
@@ -24,7 +24,7 @@ end
 scale(shape::SD.FilledCircle, f::Rational) = typeof(shape)(shape.position, (shape.diameter * f.num) ÷ f.den)
 
 function get_shape_wrt_render_region(camera, render_region_height, render_region_width, shape)
-    shape_wrt_camera = get_camera_view(camera, shape)
+    shape_wrt_camera = get_shape_wrt_camera(camera, shape)
     i_shape_wrt_render_region = map_segment(camera.rectangle.height, render_region_height, shape_wrt_camera.position.i)
     j_shape_wrt_render_region = map_segment(camera.rectangle.width, render_region_width, shape_wrt_camera.position.j)
     f = render_region_height // camera.rectangle.height

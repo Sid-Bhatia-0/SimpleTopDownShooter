@@ -448,7 +448,7 @@ function start()
             push!(DEBUG_INFO.messages, "camera height: $(camera.rectangle.height)")
             push!(DEBUG_INFO.messages, "camera width: $(camera.rectangle.width)")
 
-            push!(DEBUG_INFO.messages, "player position wrt camera: $(get_camera_view(camera, player.drawable).position)")
+            push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(camera, player.drawable).position)")
 
             player_drawable_wrt_render_region = get_shape_wrt_render_region(camera, render_region_height, render_region_width, player.drawable)
             push!(DEBUG_INFO.messages, "player position wrt rr: $(player_drawable_wrt_render_region.position)")
