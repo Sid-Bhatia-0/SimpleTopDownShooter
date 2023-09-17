@@ -450,7 +450,7 @@ function start()
 
             push!(DEBUG_INFO.messages, "player position wrt camera: $(get_camera_view(camera, player.drawable).position)")
 
-            player_drawable_wrt_render_region = get_render_region_view(camera, render_region_height, render_region_width, player.drawable)
+            player_drawable_wrt_render_region = get_shape_wrt_render_region(camera, render_region_height, render_region_width, player.drawable)
             push!(DEBUG_INFO.messages, "player position wrt rr: $(player_drawable_wrt_render_region.position)")
             push!(DEBUG_INFO.messages, "player diameter wrt rr: $(player_drawable_wrt_render_region.diameter)")
 
@@ -481,10 +481,10 @@ function start()
 
         SD.draw!(render_region, SD.Background(), 0x00cccccc)
         # SD.draw!(render_region, player.drawable, 0x000000ff)
-        player_drawable_wrt_render_region = get_render_region_view(camera, render_region_height, render_region_width, player.drawable)
+        player_drawable_wrt_render_region = get_shape_wrt_render_region(camera, render_region_height, render_region_width, player.drawable)
         SD.draw!(render_region, player_drawable_wrt_render_region, 0x000000ff)
 
-        reference_circle_wrt_render_region = get_render_region_view(camera, render_region_height, render_region_width, reference_circle)
+        reference_circle_wrt_render_region = get_shape_wrt_render_region(camera, render_region_height, render_region_width, reference_circle)
         SD.draw!(render_region, reference_circle_wrt_render_region, 0x00ff0000)
 
         draw_start_time = get_time(reference_time)
