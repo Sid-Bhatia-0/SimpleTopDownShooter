@@ -199,6 +199,9 @@ function start()
     # player
     player = Player(SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10))
 
+    # camera
+    camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -render_region_height ÷ 2, -render_region_width ÷ 2), render_region_height, render_region_width))
+
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
     # texture_atlas = TextureAtlas(color_type[])
@@ -356,6 +359,8 @@ function start()
             player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j + 2), player.drawable.diameter))
         end
 
+        camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -render_region_height ÷ 2, -render_region_width ÷ 2), render_region_height, render_region_width))
+
         # if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_C) + 1])
             # if IS_DEBUG
                 # DEBUG_INFO.show_collision_boxes = !DEBUG_INFO.show_collision_boxes
@@ -432,6 +437,13 @@ function start()
             # push!(DEBUG_INFO.messages, "avg. sleep time observed: $(round(sum(DEBUG_INFO.sleep_time_observed_buffer) / (1000 * length(DEBUG_INFO.sleep_time_observed_buffer)), digits = 2)) ms")
 
             push!(DEBUG_INFO.messages, "avg. buffer swap time per frame: $(round(sum(DEBUG_INFO.buffer_swap_time_buffer) / (1e6 * length(DEBUG_INFO.buffer_swap_time_buffer)), digits = 2)) ms")
+
+            push!(DEBUG_INFO.messages, "player position: $(player.drawable.position)")
+            push!(DEBUG_INFO.messages, "player diameter: $(player.drawable.diameter)")
+
+            push!(DEBUG_INFO.messages, "camera position: $(camera.rectangle.position)")
+            push!(DEBUG_INFO.messages, "camera height: $(camera.rectangle.height)")
+            push!(DEBUG_INFO.messages, "camera width: $(camera.rectangle.width)")
 
             # push!(DEBUG_INFO.messages, "length(entities): $(length(entities))")
 
