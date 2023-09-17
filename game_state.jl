@@ -14,7 +14,6 @@ function get_camera_view(camera, shape)
 end
 
 function map_segment(a, b, x)
-    @assert x in Base.OneTo(a)
     if isone(a)
         return one(x)
     else
