@@ -202,6 +202,7 @@ function start()
     # player
     player = Player(SD.FilledCircle(SD.Point(camera_height ÷ 2, camera_width ÷ 2), camera_height ÷ 10))
     reference_circle = SD.FilledCircle(SD.Point(camera_height ÷ 2, camera_width ÷ 2), camera_height ÷ 10)
+    player_velocity_magnitude = camera_height ÷ 200
 
     # camera
     camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
@@ -348,19 +349,19 @@ function start()
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
-            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i - 2, player.drawable.position.j), player.drawable.diameter))
+            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i - player_velocity_magnitude, player.drawable.position.j), player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
-            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i + 2, player.drawable.position.j), player.drawable.diameter))
+            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i + player_velocity_magnitude, player.drawable.position.j), player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
-            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j - 2), player.drawable.diameter))
+            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j - player_velocity_magnitude), player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
-            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j + 2), player.drawable.diameter))
+            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j + player_velocity_magnitude), player.drawable.diameter))
         end
 
         camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
