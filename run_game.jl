@@ -208,10 +208,11 @@ function start()
     reference_circle = SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS)
 
     # camera
-    camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -CAMERA_HEIGHT ÷ 2, -CAMERA_WIDTH ÷ 2), CAMERA_HEIGHT, CAMERA_WIDTH))
+    camera = Camera(SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH))
 
     # game state
     game_state = GameState(1, player, camera)
+    update_camera!(game_state)
 
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
@@ -368,7 +369,7 @@ function start()
             game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j + PLAYER_VELOCITY_MAGNITUDE), game_state.player.drawable.diameter))
         end
 
-        game_state.camera = Camera(SD.Rectangle(SD.move(SD.get_center(game_state.player.drawable), -CAMERA_HEIGHT ÷ 2, -CAMERA_WIDTH ÷ 2), CAMERA_HEIGHT, CAMERA_WIDTH))
+        update_camera!(game_state)
 
         # if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_C) + 1])
             # if IS_DEBUG

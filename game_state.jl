@@ -37,3 +37,10 @@ function get_shape_wrt_render_region(camera, render_region_height, render_region
     shape_wrt_render_region = SD.move(scale(shape_wrt_camera, f), i_shape_wrt_render_region - shape_wrt_camera.position.i, j_shape_wrt_render_region - shape_wrt_camera.position.j)
     return shape_wrt_render_region
 end
+
+update_camera(camera, player) = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera.rectangle.height ÷ 2, -camera.rectangle.width ÷ 2), camera.rectangle.height, camera.rectangle.width))
+
+function update_camera!(game_state)
+    game_state.camera = update_camera(game_state.camera, game_state.player)
+    return nothing
+end
