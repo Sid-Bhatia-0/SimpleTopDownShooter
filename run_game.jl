@@ -351,19 +351,19 @@ function start()
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
-            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i - PLAYER_VELOCITY_MAGNITUDE, game_state.player.drawable.position.j), game_state.player.drawable.diameter))
+            game_state.player = move_up(game_state.player, PLAYER_VELOCITY_MAGNITUDE)
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
-            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i + PLAYER_VELOCITY_MAGNITUDE, game_state.player.drawable.position.j), game_state.player.drawable.diameter))
+            game_state.player = move_down(game_state.player, PLAYER_VELOCITY_MAGNITUDE)
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
-            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j - PLAYER_VELOCITY_MAGNITUDE), game_state.player.drawable.diameter))
+            game_state.player = move_left(game_state.player, PLAYER_VELOCITY_MAGNITUDE)
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
-            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j + PLAYER_VELOCITY_MAGNITUDE), game_state.player.drawable.diameter))
+            game_state.player = move_right(game_state.player, PLAYER_VELOCITY_MAGNITUDE)
         end
 
         update_camera!(game_state)

@@ -59,3 +59,12 @@ function get_render_region(window_frame_buffer, camera_height_over_camera_width)
 
     return render_region
 end
+
+move_i(player, i) = Player(SD.move_i(player.drawable, i))
+move_j(player, j) = Player(SD.move_j(player.drawable, j))
+move(player, i, j) = Player(SD.move(player.drawable, i, j))
+
+move_up(player, velocity_magnitude) = move_i(player, -velocity_magnitude)
+move_down(player, velocity_magnitude) = move_i(player, velocity_magnitude)
+move_left(player, velocity_magnitude) = move_j(player, -velocity_magnitude)
+move_right(player, velocity_magnitude) = move_j(player, velocity_magnitude)
