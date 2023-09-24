@@ -207,6 +207,9 @@ function start()
     # camera
     camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
 
+    # game state
+    game_state = GameState(1, player, camera)
+
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
     # texture_atlas = TextureAtlas(color_type[])
@@ -308,8 +311,6 @@ function start()
 
     ui_context = SI.UIContext(user_interaction_state, user_input_state, layout, SI.DEFAULT_COLORS, draw_list)
 
-    frame_number = 1
-
     # max_frames_per_second = 60
     # min_ns_per_frame = 1_000_000_000 ÷ max_frames_per_second
     # min_μs_per_frame = 1_000_000 ÷ max_frames_per_second
@@ -349,22 +350,22 @@ function start()
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
-            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i - player_velocity_magnitude, player.drawable.position.j), player.drawable.diameter))
+            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i - player_velocity_magnitude, game_state.player.drawable.position.j), game_state.player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
-            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i + player_velocity_magnitude, player.drawable.position.j), player.drawable.diameter))
+            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i + player_velocity_magnitude, game_state.player.drawable.position.j), game_state.player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
-            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j - player_velocity_magnitude), player.drawable.diameter))
+            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j - player_velocity_magnitude), game_state.player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
-            player = Player(SD.FilledCircle(SD.Point(player.drawable.position.i, player.drawable.position.j + player_velocity_magnitude), player.drawable.diameter))
+            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j + player_velocity_magnitude), game_state.player.drawable.diameter))
         end
 
-        camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
+        game_state.camera = Camera(SD.Rectangle(SD.move(SD.get_center(game_state.player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
 
         # if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_C) + 1])
             # if IS_DEBUG
@@ -421,7 +422,7 @@ function start()
         if IS_DEBUG
             push!(DEBUG_INFO.messages, "Press the escape key to quit")
 
-            push!(DEBUG_INFO.messages, "previous frame number: $(frame_number)")
+            push!(DEBUG_INFO.messages, "previous frame number: $(game_state.frame_number)")
 
             push!(DEBUG_INFO.messages, "avg. total time per frame: $(round((last(DEBUG_INFO.frame_start_time_buffer) - first(DEBUG_INFO.frame_start_time_buffer)) / (10^6 * length(DEBUG_INFO.frame_start_time_buffer) - 1), digits = 2)) ms")
 
@@ -443,16 +444,16 @@ function start()
 
             push!(DEBUG_INFO.messages, "avg. buffer swap time per frame: $(round(sum(DEBUG_INFO.buffer_swap_time_buffer) / (1e6 * length(DEBUG_INFO.buffer_swap_time_buffer)), digits = 2)) ms")
 
-            push!(DEBUG_INFO.messages, "player position: $(player.drawable.position)")
-            push!(DEBUG_INFO.messages, "player diameter: $(player.drawable.diameter)")
+            push!(DEBUG_INFO.messages, "player position: $(game_state.player.drawable.position)")
+            push!(DEBUG_INFO.messages, "player diameter: $(game_state.player.drawable.diameter)")
 
-            push!(DEBUG_INFO.messages, "camera position: $(camera.rectangle.position)")
-            push!(DEBUG_INFO.messages, "camera height: $(camera.rectangle.height)")
-            push!(DEBUG_INFO.messages, "camera width: $(camera.rectangle.width)")
+            push!(DEBUG_INFO.messages, "camera position: $(game_state.camera.rectangle.position)")
+            push!(DEBUG_INFO.messages, "camera height: $(game_state.camera.rectangle.height)")
+            push!(DEBUG_INFO.messages, "camera width: $(game_state.camera.rectangle.width)")
 
-            push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(camera, player.drawable).position)")
+            push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(game_state.camera, game_state.player.drawable).position)")
 
-            player_drawable_wrt_render_region = get_shape_wrt_render_region(camera, render_region_height, render_region_width, player.drawable)
+            player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, game_state.player.drawable)
             push!(DEBUG_INFO.messages, "player position wrt rr: $(player_drawable_wrt_render_region.position)")
             push!(DEBUG_INFO.messages, "player diameter wrt rr: $(player_drawable_wrt_render_region.diameter)")
 
@@ -483,10 +484,10 @@ function start()
 
         SD.draw!(render_region, SD.Background(), 0x00cccccc)
         # SD.draw!(render_region, player.drawable, 0x000000ff)
-        player_drawable_wrt_render_region = get_shape_wrt_render_region(camera, render_region_height, render_region_width, player.drawable)
+        player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, game_state.player.drawable)
         SD.draw!(render_region, player_drawable_wrt_render_region, 0x000000ff)
 
-        reference_circle_wrt_render_region = get_shape_wrt_render_region(camera, render_region_height, render_region_width, reference_circle)
+        reference_circle_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, reference_circle)
         SD.draw!(render_region, reference_circle_wrt_render_region, 0x00ff0000)
 
         draw_start_time = get_time(reference_time)
@@ -519,7 +520,7 @@ function start()
 
         SI.reset!(user_input_state)
 
-        frame_number = frame_number + 1
+        game_state.frame_number = game_state.frame_number + 1
 
         # sleep_time_theoretical = max(0, min_μs_per_frame - (get_time(reference_time) - frame_start_time))
         # if IS_DEBUG

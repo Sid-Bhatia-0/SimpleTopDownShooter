@@ -8,6 +8,12 @@ struct Camera
     rectangle::SD.Rectangle{Int}
 end
 
+mutable struct GameState
+    frame_number::Int
+    player::Player
+    camera::Camera
+end
+
 function get_shape_wrt_camera(camera, shape)
     I = typeof(camera.rectangle.position.i)
     return SD.move(shape, -camera.rectangle.position.i + one(I), -camera.rectangle.position.j + one(I))
