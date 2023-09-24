@@ -196,13 +196,14 @@ function start()
 
     layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
 
+    camera_height = 4320 # world units
+    camera_width = 7680 # world units
+
     # player
-    player = Player(SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10))
-    reference_circle = SD.FilledCircle(SD.Point(render_region_height ÷ 2, render_region_width ÷ 2), render_region_height ÷ 10)
+    player = Player(SD.FilledCircle(SD.Point(camera_height ÷ 2, camera_width ÷ 2), camera_height ÷ 10))
+    reference_circle = SD.FilledCircle(SD.Point(camera_height ÷ 2, camera_width ÷ 2), camera_height ÷ 10)
 
     # camera
-    camera_height = render_region_height ÷ 2
-    camera_width = render_region_width ÷ 2
     camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
 
     # # assets
