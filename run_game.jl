@@ -12,6 +12,13 @@ import SimpleIMGUI as SI
 const IS_DEBUG = true
 const IS_FULLSCREEN = false
 
+const CAMERA_HEIGHT = 4320 # world units
+const CAMERA_WIDTH = 7680 # world units
+const PLAYER_RADIUS = CAMERA_HEIGHT ÷ 10 # world units
+const PLAYER_VELOCITY_MAGNITUDE = CAMERA_HEIGHT ÷ 200 # world units
+const DEFAULT_WINDOW_HEIGHT_NON_FULL_SCREEN = 550 # screen units
+const DEFAULT_WINDOW_WIDTH_NON_FULL_SCREEN = 910 # screen units
+
 mutable struct DebugInfo
     show_messages::Bool
     # show_collision_boxes::Bool
@@ -111,8 +118,8 @@ function start()
         window = GLFW.CreateWindow(window_width, window_height, window_name, primary_monitor)
         GLFW.MakeContextCurrent(window)
     else
-        window_height = 550
-        window_width = 910
+        window_height = DEFAULT_WINDOW_HEIGHT_NON_FULL_SCREEN
+        window_width = DEFAULT_WINDOW_WIDTH_NON_FULL_SCREEN
 
         setup_window_hints()
         window = GLFW.CreateWindow(window_width, window_height, window_name)
@@ -196,16 +203,12 @@ function start()
 
     layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
 
-    camera_height = 4320 # world units
-    camera_width = 7680 # world units
-
     # player
-    player = Player(SD.FilledCircle(SD.Point(camera_height ÷ 2, camera_width ÷ 2), camera_height ÷ 10))
-    reference_circle = SD.FilledCircle(SD.Point(camera_height ÷ 2, camera_width ÷ 2), camera_height ÷ 10)
-    player_velocity_magnitude = camera_height ÷ 200
+    player = Player(SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS))
+    reference_circle = SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS)
 
     # camera
-    camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
+    camera = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -CAMERA_HEIGHT ÷ 2, -CAMERA_WIDTH ÷ 2), CAMERA_HEIGHT, CAMERA_WIDTH))
 
     # game state
     game_state = GameState(1, player, camera)
@@ -350,22 +353,22 @@ function start()
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
-            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i - player_velocity_magnitude, game_state.player.drawable.position.j), game_state.player.drawable.diameter))
+            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i - PLAYER_VELOCITY_MAGNITUDE, game_state.player.drawable.position.j), game_state.player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
-            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i + player_velocity_magnitude, game_state.player.drawable.position.j), game_state.player.drawable.diameter))
+            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i + PLAYER_VELOCITY_MAGNITUDE, game_state.player.drawable.position.j), game_state.player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
-            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j - player_velocity_magnitude), game_state.player.drawable.diameter))
+            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j - PLAYER_VELOCITY_MAGNITUDE), game_state.player.drawable.diameter))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
-            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j + player_velocity_magnitude), game_state.player.drawable.diameter))
+            game_state.player = Player(SD.FilledCircle(SD.Point(game_state.player.drawable.position.i, game_state.player.drawable.position.j + PLAYER_VELOCITY_MAGNITUDE), game_state.player.drawable.diameter))
         end
 
-        game_state.camera = Camera(SD.Rectangle(SD.move(SD.get_center(game_state.player.drawable), -camera_height ÷ 2, -camera_width ÷ 2), camera_height, camera_width))
+        game_state.camera = Camera(SD.Rectangle(SD.move(SD.get_center(game_state.player.drawable), -CAMERA_HEIGHT ÷ 2, -CAMERA_WIDTH ÷ 2), CAMERA_HEIGHT, CAMERA_WIDTH))
 
         # if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_C) + 1])
             # if IS_DEBUG
