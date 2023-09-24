@@ -18,6 +18,9 @@ const PLAYER_RADIUS = CAMERA_HEIGHT ÷ 10 # world units
 const PLAYER_VELOCITY_MAGNITUDE = CAMERA_HEIGHT ÷ 200 # world units
 const DEFAULT_WINDOW_HEIGHT_NON_FULL_SCREEN = 550 # screen units
 const DEFAULT_WINDOW_WIDTH_NON_FULL_SCREEN = 910 # screen units
+const MINIMUM_WINDOW_HEIGHT = 360
+const MINIMUM_WINDOW_WIDTH = 640
+const CAMERA_WIDTH_OVER_CAMERA_HEIGHT = CAMERA_WIDTH // CAMERA_HEIGHT
 
 mutable struct DebugInfo
     show_messages::Bool
@@ -126,14 +129,12 @@ function start()
         GLFW.MakeContextCurrent(window)
     end
 
-    @assert window_height >= 360
-    @assert window_width >= 640
+    @assert window_height >= MINIMUM_WINDOW_HEIGHT
+    @assert window_width >= MINIMUM_WINDOW_WIDTH
 
-    render_region_aspect_ratio = 16 // 9
-
-    f = min(window_height ÷ render_region_aspect_ratio.den, window_width ÷ render_region_aspect_ratio.num)
-    render_region_height = f * render_region_aspect_ratio.den
-    render_region_width = f * render_region_aspect_ratio.num
+    f = min(window_height ÷ CAMERA_WIDTH_OVER_CAMERA_HEIGHT.den, window_width ÷ CAMERA_WIDTH_OVER_CAMERA_HEIGHT.num)
+    render_region_height = f * CAMERA_WIDTH_OVER_CAMERA_HEIGHT.den
+    render_region_width = f * CAMERA_WIDTH_OVER_CAMERA_HEIGHT.num
 
     window_frame_buffer = zeros(UInt32, window_height, window_width) # 0xAABBGGRR
     top_padding = (window_height - render_region_height) ÷ 2
