@@ -44,3 +44,18 @@ function update_camera!(game_state)
     game_state.camera = update_camera(game_state.camera, game_state.player)
     return nothing
 end
+
+function get_render_region(window_frame_buffer, camera_height_over_camera_width)
+    window_height, window_width = size(window_frame_buffer)
+
+    f = min(window_height ÷ camera_height_over_camera_width.den, window_width ÷ camera_height_over_camera_width.num)
+    render_region_height = f * camera_height_over_camera_width.den
+    render_region_width = f * camera_height_over_camera_width.num
+
+    top_padding = (window_height - render_region_height) ÷ 2
+    left_padding = (window_width - render_region_width) ÷ 2
+
+    render_region = @view window_frame_buffer[top_padding + 1 : top_padding + render_region_height, left_padding + 1 : left_padding + render_region_width]
+
+    return render_region
+end

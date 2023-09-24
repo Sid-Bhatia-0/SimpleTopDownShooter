@@ -132,14 +132,10 @@ function start()
     @assert window_height >= MINIMUM_WINDOW_HEIGHT
     @assert window_width >= MINIMUM_WINDOW_WIDTH
 
-    f = min(window_height ÷ CAMERA_WIDTH_OVER_CAMERA_HEIGHT.den, window_width ÷ CAMERA_WIDTH_OVER_CAMERA_HEIGHT.num)
-    render_region_height = f * CAMERA_WIDTH_OVER_CAMERA_HEIGHT.den
-    render_region_width = f * CAMERA_WIDTH_OVER_CAMERA_HEIGHT.num
-
     window_frame_buffer = zeros(UInt32, window_height, window_width) # 0xAABBGGRR
-    top_padding = (window_height - render_region_height) ÷ 2
-    left_padding = (window_width - render_region_width) ÷ 2
-    render_region = @view window_frame_buffer[top_padding + 1 : top_padding + render_region_height, left_padding + 1 : left_padding + render_region_width]
+
+    render_region = get_render_region(window_frame_buffer, CAMERA_WIDTH_OVER_CAMERA_HEIGHT)
+    render_region_height, render_region_width = size(render_region)
 
     user_input_state = SI.UserInputState(
         SI.Cursor(SD.Point(1, 1)),
