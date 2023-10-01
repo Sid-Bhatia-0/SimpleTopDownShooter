@@ -113,3 +113,11 @@ function update_player_direction!(game_state, render_region_height, render_regio
 
     return nothing
 end
+
+function get_player_direction_shape_wrt_render_region(game_state, player_drawable_wrt_render_region)
+    player_center_wrt_render_region = SD.get_center(player_drawable_wrt_render_region)
+    delta_i = player_center_wrt_render_region.i
+    delta_j = player_center_wrt_render_region.j
+
+    return SD.Line(SD.move(SD.Point(0, 0), delta_i, delta_j), SD.move(game_state.player.direction, delta_i, delta_j))
+end
