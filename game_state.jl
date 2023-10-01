@@ -87,6 +87,8 @@ end
 
 function update_cursor_position!(game_state, render_region, cursor_position_wrt_window)
     game_state.cursor_position = get_cursor_position_wrt_render_region(render_region, cursor_position_wrt_window)
+
+    return nothing
 end
 
 function update_player_direction!(game_state, render_region_height, render_region_width)
