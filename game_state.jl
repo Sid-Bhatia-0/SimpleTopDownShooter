@@ -115,9 +115,18 @@ function update_player_direction!(game_state, render_region_height, render_regio
 end
 
 function get_player_direction_shape_wrt_render_region(game_state, player_drawable_wrt_render_region)
+    player_radius_wrt_render_region = SD.get_radius(player_drawable_wrt_render_region)
+
     player_center_wrt_render_region = SD.get_center(player_drawable_wrt_render_region)
     delta_i = player_center_wrt_render_region.i
     delta_j = player_center_wrt_render_region.j
 
-    return SD.Line(SD.move(SD.Point(0, 0), delta_i, delta_j), SD.move(game_state.player.direction, delta_i, delta_j))
+    i_player_direction = game_state.player.direction.i
+    j_player_direction = game_state.player.direction.j
+
+    player_direction_magnitude_squared = i_player_direction ^ 2 + j_player_direction ^ 2
+    i_circumference = sign(i_player_direction) * isqrt(((player_radius_wrt_render_region * i_player_direction) ^ 2) ÷ player_direction_magnitude_squared)
+    j_circumference = sign(j_player_direction) * isqrt(((player_radius_wrt_render_region * j_player_direction) ^ 2) ÷ player_direction_magnitude_squared)
+
+    return SD.Line(player_center_wrt_render_region, SD.move(SD.Point(i_circumference, j_circumference), player_center_wrt_render_region.i, player_center_wrt_render_region.j))
 end
