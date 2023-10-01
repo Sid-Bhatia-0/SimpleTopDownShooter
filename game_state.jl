@@ -12,6 +12,7 @@ mutable struct GameState
     frame_number::Int
     player::Player
     camera::Camera
+    cursor_position::SD.Point{Int}
 end
 
 function get_shape_wrt_camera(camera, shape)
@@ -68,3 +69,21 @@ move_up(player, velocity_magnitude) = move_i(player, -velocity_magnitude)
 move_down(player, velocity_magnitude) = move_i(player, velocity_magnitude)
 move_left(player, velocity_magnitude) = move_j(player, -velocity_magnitude)
 move_right(player, velocity_magnitude) = move_j(player, velocity_magnitude)
+
+function get_cursor_position_wrt_render_region(render_region, cursor_position)
+    i_window = cursor_position.i
+    j_window = cursor_position.j
+    render_region_height, render_region_width = size(render_region)
+    top_padding, left_padding = render_region.indices[1].start - 1, render_region.indices[2].start - 1
+
+    I = typeof(top_padding)
+
+    i_render_region = clamp(i_window - top_padding + one(I), one(I), render_region_height)
+    j_render_region = clamp(j_window - left_padding + one(I), one(I), render_region_width)
+
+    return SD.Point(i_render_region, j_render_region)
+end
+
+function update_cursor_position!(game_state, render_region, cursor_position_wrt_window)
+    game_state.cursor_position = get_cursor_position_wrt_render_region(render_region, cursor_position_wrt_window)
+end

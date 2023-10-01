@@ -144,11 +144,11 @@ function start()
         Char[],
     )
 
-    # function cursor_position_callback(window, x, y)::Cvoid
-        # user_input_state.cursor.position = SD.Point(round(Int, y, RoundDown) + 1, round(Int, x, RoundDown) + 1)
+    function cursor_position_callback(window, x, y)::Cvoid
+        user_input_state.cursor.position = SD.Point(round(Int, y, RoundDown) + 1, round(Int, x, RoundDown) + 1)
 
-        # return nothing
-    # end
+        return nothing
+    end
 
     function key_callback(window, key, scancode, action, mods)::Cvoid
         if key == GLFW.KEY_UNKNOWN
@@ -176,7 +176,7 @@ function start()
         # return nothing
     # end
 
-    # GLFW.SetCursorPosCallback(window, cursor_position_callback)
+    GLFW.SetCursorPosCallback(window, cursor_position_callback)
     GLFW.SetKeyCallback(window, key_callback)
     # GLFW.SetMouseButtonCallback(window, mouse_button_callback)
     # GLFW.SetCharCallback(window, character_callback)
@@ -208,7 +208,7 @@ function start()
     camera = Camera(SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH))
 
     # game state
-    game_state = GameState(1, player, camera)
+    game_state = GameState(1, player, camera, SD.Point(1, 1))
     update_camera!(game_state)
 
     # # assets
@@ -339,6 +339,8 @@ function start()
             push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
         end
 
+        update_cursor_position!(game_state, render_region, user_input_state.cursor.position)
+
         if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
             GLFW.SetWindowShouldClose(window, true)
             break
@@ -444,6 +446,11 @@ function start()
             # push!(DEBUG_INFO.messages, "avg. sleep time observed: $(round(sum(DEBUG_INFO.sleep_time_observed_buffer) / (1000 * length(DEBUG_INFO.sleep_time_observed_buffer)), digits = 2)) ms")
 
             push!(DEBUG_INFO.messages, "avg. buffer swap time per frame: $(round(sum(DEBUG_INFO.buffer_swap_time_buffer) / (1e6 * length(DEBUG_INFO.buffer_swap_time_buffer)), digits = 2)) ms")
+
+            push!(DEBUG_INFO.messages, "cursor position wrt window: $(user_input_state.cursor.position)")
+            push!(DEBUG_INFO.messages, "cursor position wrt rr: $(game_state.cursor_position)")
+            push!(DEBUG_INFO.messages, "rr height: $(render_region_height)")
+            push!(DEBUG_INFO.messages, "rr width: $(render_region_width)")
 
             push!(DEBUG_INFO.messages, "player position: $(game_state.player.drawable.position)")
             push!(DEBUG_INFO.messages, "player diameter: $(game_state.player.drawable.diameter)")
