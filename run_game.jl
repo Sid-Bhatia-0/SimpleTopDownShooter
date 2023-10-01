@@ -201,7 +201,7 @@ function start()
     layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
 
     # player
-    player = Player(SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS))
+    player = Player(SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS), SD.Point(1, 0))
     reference_circle = SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS)
 
     # camera
@@ -340,6 +340,7 @@ function start()
         end
 
         update_cursor_position!(game_state, render_region, user_input_state.cursor.position)
+        update_player_direction!(game_state, render_region_height, render_region_width)
 
         if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
             GLFW.SetWindowShouldClose(window, true)
@@ -451,6 +452,7 @@ function start()
             push!(DEBUG_INFO.messages, "cursor position wrt rr: $(game_state.cursor_position)")
             push!(DEBUG_INFO.messages, "rr height: $(render_region_height)")
             push!(DEBUG_INFO.messages, "rr width: $(render_region_width)")
+            push!(DEBUG_INFO.messages, "player direction: $(game_state.player.direction)")
 
             push!(DEBUG_INFO.messages, "player position: $(game_state.player.drawable.position)")
             push!(DEBUG_INFO.messages, "player diameter: $(game_state.player.drawable.diameter)")

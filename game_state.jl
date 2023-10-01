@@ -2,6 +2,7 @@ import SimpleDraw as SD
 
 struct Player
     drawable::SD.FilledCircle{Int}
+    direction::SD.Point{Int}
 end
 
 struct Camera
@@ -86,4 +87,27 @@ end
 
 function update_cursor_position!(game_state, render_region, cursor_position_wrt_window)
     game_state.cursor_position = get_cursor_position_wrt_render_region(render_region, cursor_position_wrt_window)
+end
+
+function update_player_direction!(game_state, render_region_height, render_region_width)
+    player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, game_state.player.drawable)
+
+    player_center_wrt_render_region = SD.get_center(player_drawable_wrt_render_region)
+
+    i_player_center_wrt_render_region = player_center_wrt_render_region.i
+    j_player_center_wrt_render_region = player_center_wrt_render_region.j
+
+    i_cursor_position = game_state.cursor_position.i
+    j_cursor_position = game_state.cursor_position.j
+
+    i_player_direction = i_cursor_position - i_player_center_wrt_render_region
+    j_player_direction = j_cursor_position - j_player_center_wrt_render_region
+
+    if iszero(i_player_direction) && iszero(j_player_direction)
+        j_player_direction = one(j_player_direction)
+    end
+
+    game_state.player = Player(game_state.player.drawable, SD.Point(i_player_direction, j_player_direction))
+
+    return nothing
 end
