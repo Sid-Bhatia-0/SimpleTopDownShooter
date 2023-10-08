@@ -210,7 +210,7 @@ function start()
     camera = Camera(SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH))
 
     # game state
-    game_state = GameState(1, player, camera, SD.Point(1, 1), reference_circle)
+    game_state = GameState(1, player, camera, Vec(1, 1), reference_circle)
     update_camera!(game_state)
 
     # # assets
@@ -341,7 +341,7 @@ function start()
             push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
         end
 
-        update_cursor_position!(game_state, render_region, user_input_state.cursor.position)
+        update_cursor_position!(game_state, render_region, Vec(user_input_state.cursor.position.i, user_input_state.cursor.position.j))
         update_player_direction!(game_state, render_region_height, render_region_width)
 
         if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])

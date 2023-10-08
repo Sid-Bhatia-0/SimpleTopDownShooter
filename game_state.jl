@@ -16,7 +16,7 @@ mutable struct GameState
     frame_number::Int
     player::Player
     camera::Camera
-    cursor_position::SD.Point{Int}
+    cursor_position::Vec
     reference_circle::SD.FilledCircle{Int}
 end
 
@@ -69,8 +69,8 @@ end
 move(player, displacement) = Player(player.position + displacement, player.diameter, player.direction)
 
 function get_cursor_position_wrt_render_region(render_region, cursor_position)
-    i_window = cursor_position.i
-    j_window = cursor_position.j
+    i_window = cursor_position[1]
+    j_window = cursor_position[2]
     render_region_height, render_region_width = size(render_region)
     top_padding, left_padding = render_region.indices[1].start - 1, render_region.indices[2].start - 1
 
@@ -79,7 +79,7 @@ function get_cursor_position_wrt_render_region(render_region, cursor_position)
     i_render_region = clamp(i_window - top_padding + one(I), one(I), render_region_height)
     j_render_region = clamp(j_window - left_padding + one(I), one(I), render_region_width)
 
-    return SD.Point(i_render_region, j_render_region)
+    return Vec(i_render_region, j_render_region)
 end
 
 function update_cursor_position!(game_state, render_region, cursor_position_wrt_window)
@@ -96,8 +96,8 @@ function update_player_direction!(game_state, render_region_height, render_regio
     i_player_center_wrt_render_region = player_center_wrt_render_region.i
     j_player_center_wrt_render_region = player_center_wrt_render_region.j
 
-    i_cursor_position = game_state.cursor_position.i
-    j_cursor_position = game_state.cursor_position.j
+    i_cursor_position = game_state.cursor_position[1]
+    j_cursor_position = game_state.cursor_position[2]
 
     i_player_direction = i_cursor_position - i_player_center_wrt_render_region
     j_player_direction = j_cursor_position - j_player_center_wrt_render_region
