@@ -93,6 +93,7 @@ end
 
 const DEBUG_INFO = DebugInfo()
 
+include("physics.jl")
 include("opengl_utils.jl")
 include("game_state.jl")
 # include("colors.jl")
