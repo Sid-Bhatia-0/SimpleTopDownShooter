@@ -14,6 +14,7 @@ mutable struct GameState
     player::Player
     camera::Camera
     cursor_position::SD.Point{Int}
+    reference_circle::SD.FilledCircle{Int}
 end
 
 function get_shape_wrt_camera(camera, shape)

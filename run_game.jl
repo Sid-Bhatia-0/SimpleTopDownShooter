@@ -209,7 +209,7 @@ function start()
     camera = Camera(SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH))
 
     # game state
-    game_state = GameState(1, player, camera, SD.Point(1, 1))
+    game_state = GameState(1, player, camera, SD.Point(1, 1), reference_circle)
     update_camera!(game_state)
 
     # # assets
@@ -500,7 +500,7 @@ function start()
         SD.draw!(render_region, player_drawable_wrt_render_region, 0x000000ff)
         SD.draw!(render_region, player_direction_shape_wrt_render_region, 0x00000000)
 
-        reference_circle_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, reference_circle)
+        reference_circle_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, game_state.reference_circle)
         SD.draw!(render_region, reference_circle_wrt_render_region, 0x00ff0000)
 
         draw_start_time = get_time(reference_time)
