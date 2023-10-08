@@ -203,7 +203,7 @@ function start()
     layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
 
     # player
-    player = Player(SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS), SD.Point(1, 0))
+    player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS, Vec(1, 0))
     reference_circle = SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS)
 
     # camera
@@ -356,19 +356,19 @@ function start()
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
-            game_state.player = move_up(game_state.player, PLAYER_VELOCITY_MAGNITUDE)
+            game_state.player = move(game_state.player, Vec(-PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
-            game_state.player = move_down(game_state.player, PLAYER_VELOCITY_MAGNITUDE)
+            game_state.player = move(game_state.player, Vec(PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
-            game_state.player = move_left(game_state.player, PLAYER_VELOCITY_MAGNITUDE)
+            game_state.player = move(game_state.player, Vec(0, -PLAYER_VELOCITY_MAGNITUDE))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
-            game_state.player = move_right(game_state.player, PLAYER_VELOCITY_MAGNITUDE)
+            game_state.player = move(game_state.player, Vec(0, PLAYER_VELOCITY_MAGNITUDE))
         end
 
         update_camera!(game_state)
@@ -456,16 +456,16 @@ function start()
             push!(DEBUG_INFO.messages, "rr width: $(render_region_width)")
             push!(DEBUG_INFO.messages, "player direction: $(game_state.player.direction)")
 
-            push!(DEBUG_INFO.messages, "player position: $(game_state.player.drawable.position)")
-            push!(DEBUG_INFO.messages, "player diameter: $(game_state.player.drawable.diameter)")
+            push!(DEBUG_INFO.messages, "player position: $(game_state.player.position)")
+            push!(DEBUG_INFO.messages, "player diameter: $(game_state.player.diameter)")
 
             push!(DEBUG_INFO.messages, "camera position: $(game_state.camera.rectangle.position)")
             push!(DEBUG_INFO.messages, "camera height: $(game_state.camera.rectangle.height)")
             push!(DEBUG_INFO.messages, "camera width: $(game_state.camera.rectangle.width)")
 
-            push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(game_state.camera, game_state.player.drawable).position)")
+            push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(game_state.camera, get_player_shape(game_state.player)).position)")
 
-            player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, game_state.player.drawable)
+            player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, get_player_shape(game_state.player))
             push!(DEBUG_INFO.messages, "player position wrt rr: $(player_drawable_wrt_render_region.position)")
             push!(DEBUG_INFO.messages, "player diameter wrt rr: $(player_drawable_wrt_render_region.diameter)")
 

@@ -1,9 +1,12 @@
 import SimpleDraw as SD
 
 struct Player
-    drawable::SD.FilledCircle{Int}
-    direction::SD.Point{Int}
+    position::Vec
+    diameter::Int
+    direction::Vec
 end
+
+get_player_shape(player) = SD.FilledCircle(SD.Point(player.position...), player.diameter)
 
 struct Camera
     rectangle::SD.Rectangle{Int}
@@ -41,7 +44,7 @@ function get_shape_wrt_render_region(camera, render_region_height, render_region
     return shape_wrt_render_region
 end
 
-update_camera(camera, player) = Camera(SD.Rectangle(SD.move(SD.get_center(player.drawable), -camera.rectangle.height ÷ 2, -camera.rectangle.width ÷ 2), camera.rectangle.height, camera.rectangle.width))
+update_camera(camera, player) = Camera(SD.Rectangle(SD.move(SD.get_center(get_player_shape(player)), -camera.rectangle.height ÷ 2, -camera.rectangle.width ÷ 2), camera.rectangle.height, camera.rectangle.width))
 
 function update_camera!(game_state)
     game_state.camera = update_camera(game_state.camera, game_state.player)
@@ -63,14 +66,7 @@ function get_render_region(window_frame_buffer, camera_height_over_camera_width)
     return render_region
 end
 
-move_i(player, i) = Player(SD.move_i(player.drawable, i), player.direction)
-move_j(player, j) = Player(SD.move_j(player.drawable, j), player.direction)
-move(player, i, j) = Player(SD.move(player.drawable, i, j), player.direction)
-
-move_up(player, velocity_magnitude) = move_i(player, -velocity_magnitude)
-move_down(player, velocity_magnitude) = move_i(player, velocity_magnitude)
-move_left(player, velocity_magnitude) = move_j(player, -velocity_magnitude)
-move_right(player, velocity_magnitude) = move_j(player, velocity_magnitude)
+move(player, displacement) = Player(player.position + displacement, player.diameter, player.direction)
 
 function get_cursor_position_wrt_render_region(render_region, cursor_position)
     i_window = cursor_position.i
@@ -93,7 +89,7 @@ function update_cursor_position!(game_state, render_region, cursor_position_wrt_
 end
 
 function update_player_direction!(game_state, render_region_height, render_region_width)
-    player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, game_state.player.drawable)
+    player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, get_player_shape(game_state.player))
 
     player_center_wrt_render_region = SD.get_center(player_drawable_wrt_render_region)
 
@@ -110,7 +106,7 @@ function update_player_direction!(game_state, render_region_height, render_regio
         j_player_direction = one(j_player_direction)
     end
 
-    game_state.player = Player(game_state.player.drawable, SD.Point(i_player_direction, j_player_direction))
+    game_state.player = Player(game_state.player.position, game_state.player.diameter, Vec(i_player_direction, j_player_direction))
 
     return nothing
 end
@@ -122,8 +118,8 @@ function get_player_direction_shape_wrt_render_region(game_state, player_drawabl
     delta_i = player_center_wrt_render_region.i
     delta_j = player_center_wrt_render_region.j
 
-    i_player_direction = game_state.player.direction.i
-    j_player_direction = game_state.player.direction.j
+    i_player_direction = game_state.player.direction[1]
+    j_player_direction = game_state.player.direction[2]
 
     player_direction_magnitude_squared = i_player_direction ^ 2 + j_player_direction ^ 2
     i_circumference = sign(i_player_direction) * isqrt(((player_radius_wrt_render_region * i_player_direction) ^ 2) ÷ player_direction_magnitude_squared)
