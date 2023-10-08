@@ -96,6 +96,7 @@ const DEBUG_INFO = DebugInfo()
 include("physics.jl")
 include("opengl_utils.jl")
 include("game_state.jl")
+include("drawing.jl")
 # include("colors.jl")
 # include("collision_detection.jl")
 # include("textures.jl")
@@ -493,15 +494,7 @@ function start()
             end
         end
 
-        SD.draw!(render_region, SD.Background(), 0x00cccccc)
-        # SD.draw!(render_region, player.drawable, 0x000000ff)
-        player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, game_state.player.drawable)
-        player_direction_shape_wrt_render_region = get_player_direction_shape_wrt_render_region(game_state, player_drawable_wrt_render_region)
-        SD.draw!(render_region, player_drawable_wrt_render_region, 0x000000ff)
-        SD.draw!(render_region, player_direction_shape_wrt_render_region, 0x00000000)
-
-        reference_circle_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, game_state.reference_circle)
-        SD.draw!(render_region, reference_circle_wrt_render_region, 0x00ff0000)
+        draw_game!(render_region, game_state)
 
         draw_start_time = get_time(reference_time)
         for drawable in draw_list
