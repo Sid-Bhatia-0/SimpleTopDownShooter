@@ -14,6 +14,9 @@ const IS_FULLSCREEN = false
 
 const CAMERA_HEIGHT = 4320 # world units
 const CAMERA_WIDTH = 7680 # world units
+const ARENA_HEIGHT = 2 * CAMERA_WIDTH
+const ARENA_WIDTH = 2 * CAMERA_WIDTH
+const ARENA_WALL_THICKNESS = CAMERA_HEIGHT ÷ 16
 const PLAYER_RADIUS = CAMERA_HEIGHT ÷ 10 # world units
 const PLAYER_VELOCITY_MAGNITUDE = CAMERA_HEIGHT ÷ 200 # world units
 const DEFAULT_WINDOW_HEIGHT_NON_FULL_SCREEN = 550 # screen units
@@ -209,8 +212,16 @@ function start()
     # camera
     camera = SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH)
 
+    # walls
+    walls = [
+        SD.FilledRectangle(SD.Point(1, 1), ARENA_HEIGHT, ARENA_WALL_THICKNESS),
+        SD.FilledRectangle(SD.Point(ARENA_HEIGHT - ARENA_WALL_THICKNESS + 1, ARENA_WALL_THICKNESS + 1), ARENA_WALL_THICKNESS, ARENA_WIDTH - 2 * ARENA_WALL_THICKNESS),
+        SD.FilledRectangle(SD.Point(1, ARENA_WIDTH - ARENA_WALL_THICKNESS + 1), ARENA_HEIGHT, ARENA_WALL_THICKNESS),
+        SD.FilledRectangle(SD.Point(1, ARENA_WALL_THICKNESS + 1), ARENA_WALL_THICKNESS, ARENA_WIDTH - 2 * ARENA_WALL_THICKNESS),
+    ]
+
     # game state
-    game_state = GameState(1, player, camera, Vec(1, 1), reference_circle)
+    game_state = GameState(1, player, camera, Vec(1, 1), reference_circle, walls)
     update_camera!(game_state)
 
     # # assets

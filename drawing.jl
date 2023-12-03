@@ -20,5 +20,11 @@ function draw_game!(render_region, game_state)
 
     SD.draw!(render_region, reference_circle_wrt_render_region, 0x00ff0000)
 
+    for wall in game_state.walls
+        wall_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, wall)
+
+        SD.draw!(render_region, wall_wrt_render_region, 0x0000ff00)
+    end
+
     return nothing
 end

@@ -14,6 +14,7 @@ mutable struct GameState
     camera::SD.Rectangle{Int}
     cursor_position::Vec
     reference_circle::SD.FilledCircle{Int}
+    walls::Vector{SD.FilledRectangle{Int}}
 end
 
 function get_shape_wrt_camera(camera, shape)
@@ -30,6 +31,7 @@ function map_segment(a, b, x)
 end
 
 scale(shape::SD.FilledCircle, f::Rational) = typeof(shape)(shape.position, (shape.diameter * f.num) ÷ f.den)
+scale(shape::SD.FilledRectangle, f::Rational) = typeof(shape)(shape.position, (shape.height * f.num) ÷ f.den, (shape.width * f.num) ÷ f.den)
 
 function get_shape_wrt_render_region(camera, render_region_height, render_region_width, shape)
     shape_wrt_camera = get_shape_wrt_camera(camera, shape)
