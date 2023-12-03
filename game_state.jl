@@ -30,8 +30,8 @@ function map_segment(a, b, x)
     end
 end
 
-scale(shape::SD.FilledCircle, f::Rational) = typeof(shape)(shape.position, (shape.diameter * f.num) ÷ f.den)
-scale(shape::SD.FilledRectangle, f::Rational) = typeof(shape)(shape.position, (shape.height * f.num) ÷ f.den, (shape.width * f.num) ÷ f.den)
+scale(shape::SD.AbstractCircle, f::Rational) = typeof(shape)(shape.position, (shape.diameter * f.num) ÷ f.den)
+scale(shape::SD.AbstractRectangle, f::Rational) = typeof(shape)(shape.position, (shape.height * f.num) ÷ f.den, (shape.width * f.num) ÷ f.den)
 
 function get_shape_wrt_render_region(camera, render_region_height, render_region_width, shape)
     shape_wrt_camera = get_shape_wrt_camera(camera, shape)
