@@ -8,21 +8,17 @@ end
 
 get_player_shape(player) = SD.FilledCircle(SD.Point(player.position...), player.diameter)
 
-struct Camera
-    rectangle::SD.Rectangle{Int}
-end
-
 mutable struct GameState
     frame_number::Int
     player::Player
-    camera::Camera
+    camera::SD.Rectangle{Int}
     cursor_position::Vec
     reference_circle::SD.FilledCircle{Int}
 end
 
 function get_shape_wrt_camera(camera, shape)
-    I = typeof(camera.rectangle.position.i)
-    return SD.move(shape, -camera.rectangle.position.i + one(I), -camera.rectangle.position.j + one(I))
+    I = typeof(camera.position.i)
+    return SD.move(shape, -camera.position.i + one(I), -camera.position.j + one(I))
 end
 
 function map_segment(a, b, x)
@@ -37,14 +33,14 @@ scale(shape::SD.FilledCircle, f::Rational) = typeof(shape)(shape.position, (shap
 
 function get_shape_wrt_render_region(camera, render_region_height, render_region_width, shape)
     shape_wrt_camera = get_shape_wrt_camera(camera, shape)
-    i_shape_wrt_render_region = map_segment(camera.rectangle.height, render_region_height, shape_wrt_camera.position.i)
-    j_shape_wrt_render_region = map_segment(camera.rectangle.width, render_region_width, shape_wrt_camera.position.j)
-    f = render_region_height // camera.rectangle.height
+    i_shape_wrt_render_region = map_segment(camera.height, render_region_height, shape_wrt_camera.position.i)
+    j_shape_wrt_render_region = map_segment(camera.width, render_region_width, shape_wrt_camera.position.j)
+    f = render_region_height // camera.height
     shape_wrt_render_region = SD.move(scale(shape_wrt_camera, f), i_shape_wrt_render_region - shape_wrt_camera.position.i, j_shape_wrt_render_region - shape_wrt_camera.position.j)
     return shape_wrt_render_region
 end
 
-update_camera(camera, player) = Camera(SD.Rectangle(SD.move(SD.get_center(get_player_shape(player)), -camera.rectangle.height ÷ 2, -camera.rectangle.width ÷ 2), camera.rectangle.height, camera.rectangle.width))
+update_camera(camera, player) = SD.Rectangle(SD.move(SD.get_center(get_player_shape(player)), -camera.height ÷ 2, -camera.width ÷ 2), camera.height, camera.width)
 
 function update_camera!(game_state)
     game_state.camera = update_camera(game_state.camera, game_state.player)

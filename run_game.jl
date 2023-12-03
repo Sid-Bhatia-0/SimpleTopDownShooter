@@ -207,7 +207,7 @@ function start()
     reference_circle = SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS)
 
     # camera
-    camera = Camera(SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH))
+    camera = SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH)
 
     # game state
     game_state = GameState(1, player, camera, Vec(1, 1), reference_circle)
@@ -459,9 +459,9 @@ function start()
             push!(DEBUG_INFO.messages, "player position: $(game_state.player.position)")
             push!(DEBUG_INFO.messages, "player diameter: $(game_state.player.diameter)")
 
-            push!(DEBUG_INFO.messages, "camera position: $(game_state.camera.rectangle.position)")
-            push!(DEBUG_INFO.messages, "camera height: $(game_state.camera.rectangle.height)")
-            push!(DEBUG_INFO.messages, "camera width: $(game_state.camera.rectangle.width)")
+            push!(DEBUG_INFO.messages, "camera position: $(game_state.camera.position)")
+            push!(DEBUG_INFO.messages, "camera height: $(game_state.camera.height)")
+            push!(DEBUG_INFO.messages, "camera width: $(game_state.camera.width)")
 
             push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(game_state.camera, get_player_shape(game_state.player)).position)")
 
