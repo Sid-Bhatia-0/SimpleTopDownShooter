@@ -367,19 +367,19 @@ function start()
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
-            game_state.player = move(game_state.player, Vec(-PLAYER_VELOCITY_MAGNITUDE, 0))
+            try_move_player!(game_state, Vec(-PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
-            game_state.player = move(game_state.player, Vec(PLAYER_VELOCITY_MAGNITUDE, 0))
+            try_move_player!(game_state, Vec(PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
-            game_state.player = move(game_state.player, Vec(0, -PLAYER_VELOCITY_MAGNITUDE))
+            try_move_player!(game_state, Vec(0, -PLAYER_VELOCITY_MAGNITUDE))
         end
 
         if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
-            game_state.player = move(game_state.player, Vec(0, PLAYER_VELOCITY_MAGNITUDE))
+            try_move_player!(game_state, Vec(0, PLAYER_VELOCITY_MAGNITUDE))
         end
 
         update_camera!(game_state)

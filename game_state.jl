@@ -66,6 +66,24 @@ end
 
 move(player, displacement) = Player(player.position + displacement, player.diameter, player.direction)
 
+function try_move_player!(game_state, displacement)
+    player = game_state.player
+
+    new_player = move(player, displacement)
+
+    new_player_shape = get_player_shape(new_player)
+
+    for wall in game_state.walls
+        if is_colliding(wall, new_player_shape)
+            return nothing
+        end
+    end
+
+    game_state.player = new_player
+
+    return nothing
+end
+
 function get_cursor_position_wrt_render_region(render_region, cursor_position)
     i_window = cursor_position[1]
     j_window = cursor_position[2]
