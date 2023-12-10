@@ -26,19 +26,80 @@ function map_segment(a, b, x)
     if isone(a)
         return one(x)
     else
-        ((b - one(b)) * (x - one(x))) ÷ (a - one(a)) + one(x) # linearly map Base.OneTo(a) to Base.OneTo(b), such that when x = 1, y == 1, and when x = a, y == b
+        ((b - one(b)) * (x - one(x))) ÷ (a - one(a)) + one(x) # linearly map Base.OneTo(a) to Base.OneTo(b), such that when x = 1, y == 1, and when x = a, y == b.
+        # There is some kind of rounding down that happens. For example:
+        # julia> map_segment(20, 5, 16)
+        # 4
+
+        # julia> map_segment(20, 5, 15)
+        # 3
+
+        # julia> map_segment(20, 5, 17)
+        # 4
+
+        # julia> map_segment(20, 5, 18)
+        # 4
+
+        # julia> map_segment(20, 5, 19)
+        # 4
+
+        # julia> map_segment(20, 5, 20)
+        # 5
     end
 end
 
 scale(shape::SD.AbstractCircle, f::Rational) = typeof(shape)(shape.position, (shape.diameter * f.num) ÷ f.den)
 scale(shape::SD.AbstractRectangle, f::Rational) = typeof(shape)(shape.position, (shape.height * f.num) ÷ f.den, (shape.width * f.num) ÷ f.den)
 
+# world coordinate is world space coordinate, like actual entire game world
+# camera is essentially a rectangle somewhere in the world. camera coordinate is simply the position of something in the world with respect to the camera (just translated such that top left cell of the camera is (1, 1))
+world_coordinate_to_camera_coordinate(i_shape_wrt_world, i_camera_wrt_world) = i_shape_wrt_world - i_camera_wrt_world + one(i_shape_wrt_world)
+
+world_coordinate_to_camera_coordinate(position_shape_wrt_world::Vec, position_camera_wrt_world::Vec) = world_coordinate_to_camera_coordinate.(position_shape_wrt_world, position_camera_wrt_world)
+
+camera_coordinate_to_render_region_coordinate(camera_height, render_region_height, i_shape_wrt_camera) = map_segment(camera_height, render_region_height, i_shape_wrt_camera)
+
+camera_coordinate_to_render_region_coordinate(camera_size::Vec, render_region_size::Vec, position_shape_wrt_camera::Vec) = camera_coordinate_to_render_region_coordinate.(camera_size, render_region_size, position_shape_wrt_camera)
+
+function world_coordinate_to_render_region_coordinate(camera_height, render_region_height, i_shape_wrt_world, i_camera_wrt_world)
+    i_shape_wrt_camera = world_coordinate_to_camera_coordinate(i_shape_wrt_world, i_camera_wrt_world)
+    i_shape_wrt_render_region = camera_coordinate_to_render_region_coordinate(camera_height, render_region_height, i_shape_wrt_camera)
+    return i_shape_wrt_render_region
+end
+
+function world_coordinate_to_render_region_coordinate(camera_size::Vec, render_region_size::Vec, position_shape_wrt_world::Vec, position_camera_wrt_world::Vec)
+    position_shape_wrt_camera = world_coordinate_to_camera_coordinate(position_shape_wrt_world, position_camera_wrt_world)
+    position_shape_wrt_render_region = camera_coordinate_to_render_region_coordinate(camera_size, render_region_size, position_shape_wrt_camera)
+    return position_shape_wrt_render_region
+end
+
+function get_shape_from_extrema(shape::SD.AbstractCircle, i_min, j_min, i_max, j_max)
+    @assert i_max - i_min >= zero(i_max)
+    @assert j_max - j_min >= zero(j_max)
+    diameter = i_max - i_min + one(i_max)
+    return typeof(shape)(SD.Point(i_min, j_min), diameter)
+end
+
+function get_shape_from_extrema(shape::SD.AbstractRectangle, i_min, j_min, i_max, j_max)
+    @assert i_max - i_min >= zero(i_max)
+    @assert j_max - j_min >= zero(j_max)
+    height = i_max - i_min + one(i_max)
+    width = j_max - j_min + one(j_max)
+    return typeof(shape)(SD.Point(i_min, j_min), height, width)
+end
+
 function get_shape_wrt_render_region(camera, render_region_height, render_region_width, shape)
-    shape_wrt_camera = get_shape_wrt_camera(camera, shape)
-    i_shape_wrt_render_region = map_segment(camera.height, render_region_height, shape_wrt_camera.position.i)
-    j_shape_wrt_render_region = map_segment(camera.width, render_region_width, shape_wrt_camera.position.j)
-    f = render_region_height // camera.height
-    shape_wrt_render_region = SD.move(scale(shape_wrt_camera, f), i_shape_wrt_render_region - shape_wrt_camera.position.i, j_shape_wrt_render_region - shape_wrt_camera.position.j)
+    camera_size = Vec(camera.height, camera.width)
+    render_region_size = Vec(render_region_height, render_region_width)
+    top_left_shape_wrt_world = Vec(SD.get_position(shape))
+    bottom_right_shape_wrt_world = Vec(SD.get_i_max(shape), SD.get_j_max(shape))
+    position_camera_wrt_world = Vec(camera.position)
+
+    top_left_shape_wrt_render_region = world_coordinate_to_render_region_coordinate(camera_size, render_region_size, top_left_shape_wrt_world, position_camera_wrt_world)
+    bottom_right_shape_wrt_render_region = world_coordinate_to_render_region_coordinate(camera_size, render_region_size, bottom_right_shape_wrt_world, position_camera_wrt_world)
+
+    shape_wrt_render_region = get_shape_from_extrema(shape, top_left_shape_wrt_render_region..., bottom_right_shape_wrt_render_region...)
+
     return shape_wrt_render_region
 end
 
