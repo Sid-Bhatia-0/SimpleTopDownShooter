@@ -215,9 +215,9 @@ function start()
     # walls
     walls = [
         SD.FilledRectangle(SD.Point(1, 1), ARENA_HEIGHT, ARENA_WALL_THICKNESS),
-        SD.FilledRectangle(SD.Point(ARENA_HEIGHT - ARENA_WALL_THICKNESS + 1, ARENA_WALL_THICKNESS + 1), ARENA_WALL_THICKNESS, ARENA_WIDTH - 2 * ARENA_WALL_THICKNESS),
+        SD.FilledRectangle(SD.Point(ARENA_HEIGHT - ARENA_WALL_THICKNESS + 1, 1), ARENA_WALL_THICKNESS, ARENA_WIDTH),
         SD.FilledRectangle(SD.Point(1, ARENA_WIDTH - ARENA_WALL_THICKNESS + 1), ARENA_HEIGHT, ARENA_WALL_THICKNESS),
-        SD.FilledRectangle(SD.Point(1, ARENA_WALL_THICKNESS + 1), ARENA_WALL_THICKNESS, ARENA_WIDTH - 2 * ARENA_WALL_THICKNESS),
+        SD.FilledRectangle(SD.Point(1, 1), ARENA_WALL_THICKNESS, ARENA_WIDTH),
     ]
 
     # game state
