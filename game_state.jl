@@ -26,7 +26,8 @@ function map_segment(a, b, x)
     if isone(a)
         return one(x)
     else
-        ((b - one(b)) * (x - one(x))) ÷ (a - one(a)) + one(x) # linearly map Base.OneTo(a) to Base.OneTo(b), such that when x = 1, y == 1, and when x = a, y == b.
+        ((b - one(b)) * (x - one(x))) ÷ (a - one(a)) + one(x)
+        # linearly map Base.OneTo(a) to Base.OneTo(b), such that when x = 1, y == 1, and when x = a, y == b
         # There is some kind of rounding down that happens. For example:
         # julia> map_segment(20, 5, 16)
         # 4
