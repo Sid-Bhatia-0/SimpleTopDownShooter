@@ -73,7 +73,7 @@ end
 function get_shape_from_extrema(shape::SD.AbstractCircle, i_min, j_min, i_max, j_max)
     @assert i_max - i_min >= zero(i_max)
     @assert j_max - j_min >= zero(j_max)
-    diameter = i_max - i_min + one(i_max)
+    diameter = max(i_max - i_min + one(i_max), j_max - j_min + one(j_max))
     return typeof(shape)(SD.Point(i_min, j_min), diameter)
 end
 
