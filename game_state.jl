@@ -48,9 +48,6 @@ function map_segment(a, b, x)
     end
 end
 
-scale(shape::SD.AbstractCircle, f::Rational) = typeof(shape)(shape.position, (shape.diameter * f.num) ÷ f.den)
-scale(shape::SD.AbstractRectangle, f::Rational) = typeof(shape)(shape.position, (shape.height * f.num) ÷ f.den, (shape.width * f.num) ÷ f.den)
-
 # world coordinate is world space coordinate, like actual entire game world
 # camera is essentially a rectangle somewhere in the world. camera coordinate is simply the position of something in the world with respect to the camera (just translated such that top left cell of the camera is (1, 1))
 world_coordinate_to_camera_coordinate(i_shape_wrt_world, i_camera_wrt_world) = i_shape_wrt_world - i_camera_wrt_world + one(i_shape_wrt_world)
