@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "c3d24a8b884bc1133a0cf00c56d9ee2f3ecbdee3"
+project_hash = "139fb3776307aeca9444e6e585820886bc6c1c2b"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -197,6 +197,12 @@ repo-rev = "60f7316f3918a448a0e6ed3affca25667268b394"
 repo-url = "https://github.com/JuliaImGui/SimpleIMGUI.jl.git"
 uuid = "37c0dfa8-367e-4f81-95ac-b6bdb4b61673"
 version = "0.1.0"
+
+[[deps.SimpleTopDownShooter]]
+deps = ["DataStructures", "GLFW", "ModernGL", "SimpleDraw", "SimpleIMGUI", "StaticArrays"]
+path = ".."
+uuid = "7552fec6-7f22-451c-b439-ffdc92e2535d"
+version = "0.0.1"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
