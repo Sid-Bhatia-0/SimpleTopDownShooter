@@ -1,3 +1,5 @@
+module SimpleTopDownShooter
+
 # import Accessors
 import ModernGL as MGL
 import DataStructures as DS
@@ -561,4 +563,4 @@ function start()
     return nothing
 end
 
-start()
+end # module
