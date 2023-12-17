@@ -1,3 +1,8 @@
+name = "SimpleTopDownShooter"
+uuid = "7552fec6-7f22-451c-b439-ffdc92e2535d"
+authors = ["Siddharth Bhatia and contributors"]
+version = "0.0.1"
+
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 GLFW = "f7f18e0c-5ee9-5ccd-a5bf-e8befd85ed98"
@@ -5,3 +10,12 @@ ModernGL = "66fc600b-dfda-50eb-8b99-91cfa97b1301"
 SimpleDraw = "d1acf6f4-8553-480e-80ae-3c883f0a995a"
 SimpleIMGUI = "37c0dfa8-367e-4f81-95ac-b6bdb4b61673"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
