@@ -17,7 +17,7 @@ const CAMERA_WIDTH = 7680 # world units
 const ARENA_HEIGHT = 2 * CAMERA_WIDTH
 const ARENA_WIDTH = 2 * CAMERA_WIDTH
 const ARENA_WALL_THICKNESS = CAMERA_HEIGHT ÷ 16
-const PLAYER_RADIUS = CAMERA_HEIGHT ÷ 10 # world units
+const PLAYER_DIAMETER = CAMERA_HEIGHT ÷ 10 # world units
 const PLAYER_VELOCITY_MAGNITUDE = CAMERA_HEIGHT ÷ 200 # world units
 const DEFAULT_WINDOW_HEIGHT_NON_FULL_SCREEN = 550 # screen units
 const DEFAULT_WINDOW_WIDTH_NON_FULL_SCREEN = 910 # screen units
@@ -206,8 +206,8 @@ function start()
     layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
 
     # player
-    player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS, Vec(1, 0))
-    reference_circle = SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_RADIUS)
+    player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER, Vec(1, 0))
+    reference_circle = SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER)
 
     # camera
     camera = SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH)
