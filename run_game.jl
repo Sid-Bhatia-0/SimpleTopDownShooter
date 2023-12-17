@@ -207,7 +207,6 @@ function start()
 
     # player
     player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER, Vec(1, 0))
-    reference_circle = SD.FilledCircle(SD.Point(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER)
 
     # camera
     camera = SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH)
@@ -221,7 +220,7 @@ function start()
     ]
 
     # game state
-    game_state = GameState(1, player, camera, Vec(1, 1), reference_circle, walls)
+    game_state = GameState(1, player, camera, Vec(1, 1), walls)
     update_camera!(game_state)
 
     # # assets

@@ -13,7 +13,6 @@ mutable struct GameState
     player::Player
     camera::SD.Rectangle{Int}
     cursor_position::Vec
-    reference_circle::SD.FilledCircle{Int}
     walls::Vector{SD.FilledRectangle{Int}}
 end
 
