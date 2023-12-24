@@ -453,9 +453,8 @@ function start()
             end
         end
 
-        draw_game!(game_state)
-
         draw_start_time = get_time(reference_time)
+        draw_game!(game_state)
         for drawable in game_state.ui_context.draw_list
             # if isa(drawable, ShapeDrawable)
                 # SD.draw!(render_region, drawable.shape, drawable.color)
