@@ -167,6 +167,7 @@ function start()
         0x000000ff, # player_color
         0x00000000, # player_direction_color
         0x00777777, # wall_color
+        window_frame_buffer,
     )
     update_camera!(game_state)
 
@@ -468,7 +469,7 @@ function start()
         empty!(draw_list)
 
         texture_upload_start_time = get_time(reference_time)
-        update_back_buffer(window_frame_buffer)
+        update_back_buffer(game_state.window_frame_buffer)
         texture_upload_end_time = get_time(reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.texture_upload_time_buffer, texture_upload_end_time - texture_upload_start_time)

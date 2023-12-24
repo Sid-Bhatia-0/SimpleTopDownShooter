@@ -36,4 +36,5 @@ mutable struct GameState
     player_color::UInt32
     player_direction_color::UInt32
     wall_color::UInt32
+    window_frame_buffer::Matrix{UInt32}
 end
