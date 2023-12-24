@@ -149,7 +149,8 @@ function update_cursor_position!(game_state, cursor_position_wrt_window)
     return nothing
 end
 
-function update_player_direction!(game_state, render_region_height, render_region_width)
+function update_player_direction!(game_state)
+    render_region_height, render_region_width = size(game_state.render_region)
     player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, get_player_shape(game_state.player))
 
     player_center_wrt_render_region = SD.get_center(player_drawable_wrt_render_region)

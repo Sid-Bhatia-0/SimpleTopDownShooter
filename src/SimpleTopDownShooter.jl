@@ -301,7 +301,7 @@ function start()
         end
 
         update_cursor_position!(game_state, Vec(user_input_state.cursor.position.i, user_input_state.cursor.position.j))
-        update_player_direction!(game_state, render_region_height, render_region_width)
+        update_player_direction!(game_state)
 
         if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
             GLFW.SetWindowShouldClose(window, true)
