@@ -27,77 +27,8 @@ const MINIMUM_WINDOW_HEIGHT = 360
 const MINIMUM_WINDOW_WIDTH = 640
 const CAMERA_WIDTH_OVER_CAMERA_HEIGHT = CAMERA_WIDTH // CAMERA_HEIGHT
 
-mutable struct DebugInfo
-    show_messages::Bool
-    # show_collision_boxes::Bool
-    messages::Vector{String}
-    frame_start_time_buffer::DS.CircularBuffer{Int}
-    event_poll_time_buffer::DS.CircularBuffer{Int}
-    # dt_buffer::DS.CircularBuffer{Int}
-    # update_time_buffer::DS.CircularBuffer{Int}
-    # drawing_system_time_buffer::DS.CircularBuffer{Int}
-    draw_time_buffer::DS.CircularBuffer{Int}
-    texture_upload_time_buffer::DS.CircularBuffer{Int}
-    buffer_swap_time_buffer::DS.CircularBuffer{Int}
-    # sleep_time_theoretical_buffer::DS.CircularBuffer{Int}
-    # sleep_time_observed_buffer::DS.CircularBuffer{Int}
-end
-
-function DebugInfo()
-    show_messages = true
-    # show_collision_boxes = true
-    messages = String[]
-    sliding_window_size = 30
-
-    frame_start_time_buffer = DS.CircularBuffer{Int}(sliding_window_size + 1)
-    push!(frame_start_time_buffer, 0)
-
-    event_poll_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    push!(event_poll_time_buffer, 0)
-
-    # dt_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(dt_buffer, 0)
-
-    # update_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(update_time_buffer, 0)
-
-    # drawing_system_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(drawing_system_time_buffer, 0)
-
-    draw_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    push!(draw_time_buffer, 0)
-
-    texture_upload_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    push!(texture_upload_time_buffer, 0)
-
-    # sleep_time_theoretical_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(sleep_time_theoretical_buffer, 0)
-
-    # sleep_time_observed_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    # push!(sleep_time_observed_buffer, 0)
-
-    buffer_swap_time_buffer = DS.CircularBuffer{Int}(sliding_window_size)
-    push!(buffer_swap_time_buffer, 0)
-
-    return DebugInfo(
-        show_messages,
-        # show_collision_boxes,
-        messages,
-        frame_start_time_buffer,
-        event_poll_time_buffer,
-        # dt_buffer,
-        # update_time_buffer,
-        # drawing_system_time_buffer,
-        draw_time_buffer,
-        texture_upload_time_buffer,
-        buffer_swap_time_buffer,
-        # sleep_time_theoretical_buffer,
-        # sleep_time_observed_buffer,
-    )
-end
-
-const DEBUG_INFO = DebugInfo()
-
+include("types.jl")
+include("debug.jl")
 include("physics.jl")
 include("opengl_utils.jl")
 include("game_state.jl")
@@ -107,6 +38,10 @@ include("drawing.jl")
 # include("textures.jl")
 # include("entity_component_system.jl")
 include("utils.jl")
+
+if IS_DEBUG
+    const DEBUG_INFO = DebugInfo()
+end
 
 # const PIXEL_LENGTH = 2^24
 
@@ -142,7 +77,6 @@ function start()
     window_frame_buffer = zeros(UInt32, window_height, window_width) # 0xAABBGGRR
 
     render_region = get_render_region(window_frame_buffer, CAMERA_WIDTH_OVER_CAMERA_HEIGHT)
-    render_region_height, render_region_width = size(render_region)
 
     user_input_state = SI.UserInputState(
         SI.Cursor(SD.Point(1, 1)),
@@ -205,7 +139,7 @@ function start()
 
     user_interaction_state = SI.UserInteractionState(SI.NULL_WIDGET, SI.NULL_WIDGET, SI.NULL_WIDGET)
 
-    layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
+    layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), size(render_region)...))
 
     # player
     player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER, Vec(1, 0))
@@ -220,10 +154,6 @@ function start()
         SD.FilledRectangle(SD.Point(1, ARENA_WIDTH - ARENA_WALL_THICKNESS + 1), ARENA_HEIGHT, ARENA_WALL_THICKNESS),
         SD.FilledRectangle(SD.Point(1, 1), ARENA_WALL_THICKNESS, ARENA_WIDTH),
     ]
-
-    # game state
-    game_state = GameState(1, player, camera, Vec(1, 1), walls)
-    update_camera!(game_state)
 
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
@@ -326,6 +256,23 @@ function start()
 
     ui_context = SI.UIContext(user_interaction_state, user_input_state, layout, SI.DEFAULT_COLORS, draw_list)
 
+    # game state
+    game_state = GameState(
+        1, # frame_number
+        player,
+        camera,
+        Vec(1, 1), # cursor_position
+        walls,
+        0x00cccccc, # background_color
+        0x000000ff, # player_color
+        0x00000000, # player_direction_color
+        0x00777777, # wall_color
+        window_frame_buffer,
+        render_region,
+        ui_context,
+    )
+    update_camera!(game_state)
+
     # max_frames_per_second = 60
     # min_ns_per_frame = 1_000_000_000 ÷ max_frames_per_second
     # min_μs_per_frame = 1_000_000 ÷ max_frames_per_second
@@ -353,33 +300,33 @@ function start()
             push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
         end
 
-        update_cursor_position!(game_state, render_region, Vec(user_input_state.cursor.position.i, user_input_state.cursor.position.j))
-        update_player_direction!(game_state, render_region_height, render_region_width)
+        update_cursor_position!(game_state)
+        update_player_direction!(game_state)
 
-        if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
+        if SI.went_down(game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
             GLFW.SetWindowShouldClose(window, true)
             break
         end
 
-        if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1])
+        if SI.went_down(game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1])
             if IS_DEBUG
                 DEBUG_INFO.show_messages = !DEBUG_INFO.show_messages
             end
         end
 
-        if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
             try_move_player!(game_state, Vec(-PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
-        if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
             try_move_player!(game_state, Vec(PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
-        if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
             try_move_player!(game_state, Vec(0, -PLAYER_VELOCITY_MAGNITUDE))
         end
 
-        if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
             try_move_player!(game_state, Vec(0, PLAYER_VELOCITY_MAGNITUDE))
         end
 
@@ -416,7 +363,7 @@ function start()
             # entities[2] = (Accessors.@set player.velocity.y = NULL_VELOCITY.y)
         # end
 
-        layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width)
+        reset_ui_layout!(game_state)
 
         # dt = previous_frame_time
         # if IS_DEBUG
@@ -462,22 +409,17 @@ function start()
 
             push!(DEBUG_INFO.messages, "avg. buffer swap time per frame: $(round(sum(DEBUG_INFO.buffer_swap_time_buffer) / (1e6 * length(DEBUG_INFO.buffer_swap_time_buffer)), digits = 2)) ms")
 
-            push!(DEBUG_INFO.messages, "cursor position wrt window: $(user_input_state.cursor.position)")
+            push!(DEBUG_INFO.messages, "cursor position wrt window: $(game_state.ui_context.user_input_state.cursor.position)")
             push!(DEBUG_INFO.messages, "cursor position wrt rr: $(game_state.cursor_position)")
-            push!(DEBUG_INFO.messages, "rr height: $(render_region_height)")
-            push!(DEBUG_INFO.messages, "rr width: $(render_region_width)")
-            push!(DEBUG_INFO.messages, "player direction: $(game_state.player.direction)")
-
-            push!(DEBUG_INFO.messages, "player position: $(game_state.player.position)")
-            push!(DEBUG_INFO.messages, "player diameter: $(game_state.player.diameter)")
+            push!(DEBUG_INFO.messages, "rr size: $(size(game_state.render_region))")
+            push!(DEBUG_INFO.messages, "player: $(game_state.player)")
 
             push!(DEBUG_INFO.messages, "camera position: $(game_state.camera.position)")
-            push!(DEBUG_INFO.messages, "camera height: $(game_state.camera.height)")
-            push!(DEBUG_INFO.messages, "camera width: $(game_state.camera.width)")
+            push!(DEBUG_INFO.messages, "camera size: $((game_state.camera.height, game_state.camera.width))")
 
             push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(game_state.camera, get_player_shape(game_state.player)).position)")
 
-            player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, get_player_shape(game_state.player))
+            player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, size(game_state.render_region)..., get_player_shape(game_state.player))
             push!(DEBUG_INFO.messages, "player position wrt rr: $(player_drawable_wrt_render_region.position)")
             push!(DEBUG_INFO.messages, "player diameter wrt rr: $(player_drawable_wrt_render_region.diameter)")
 
@@ -497,7 +439,7 @@ function start()
 
                     SI.do_widget!(
                         SI.TEXT,
-                        ui_context,
+                        game_state.ui_context,
                         SI.WidgetID(@__FILE__, @__LINE__, j),
                         text;
                         alignment = alignment,
@@ -506,24 +448,16 @@ function start()
             end
         end
 
-        draw_game!(render_region, game_state)
-
         draw_start_time = get_time(reference_time)
-        for drawable in draw_list
-            # if isa(drawable, ShapeDrawable)
-                # SD.draw!(render_region, drawable.shape, drawable.color)
-            # else
-                SD.draw!(render_region, drawable)
-            # end
-        end
+        draw_game!(game_state)
         draw_end_time = get_time(reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.draw_time_buffer, draw_end_time - draw_start_time)
         end
-        empty!(draw_list)
+        empty!(game_state.ui_context.draw_list)
 
         texture_upload_start_time = get_time(reference_time)
-        update_back_buffer(window_frame_buffer)
+        update_back_buffer(game_state.window_frame_buffer)
         texture_upload_end_time = get_time(reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.texture_upload_time_buffer, texture_upload_end_time - texture_upload_start_time)
@@ -536,7 +470,7 @@ function start()
             push!(DEBUG_INFO.buffer_swap_time_buffer, buffer_swap_end_time - buffer_swap_start_time)
         end
 
-        SI.reset!(user_input_state)
+        SI.reset!(game_state.ui_context.user_input_state)
 
         game_state.frame_number = game_state.frame_number + 1
 

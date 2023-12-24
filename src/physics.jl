@@ -1,8 +1,6 @@
 import StaticArrays as SA
 import SimpleDraw as SD
 
-const Vec = SA.SVector{2, Int}
-
 Vec(point::SD.Point) = Vec(point.i, point.j)
 SD.Point(vector::Vec) = SD.Point(vector[1], vector[2])
 

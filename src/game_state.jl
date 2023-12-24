@@ -1,20 +1,6 @@
 import SimpleDraw as SD
 
-struct Player
-    position::Vec
-    diameter::Int
-    direction::Vec
-end
-
 get_player_shape(player) = SD.FilledCircle(SD.Point(player.position...), player.diameter)
-
-mutable struct GameState
-    frame_number::Int
-    player::Player
-    camera::SD.Rectangle{Int}
-    cursor_position::Vec
-    walls::Vector{SD.FilledRectangle{Int}}
-end
 
 function get_shape_wrt_camera(camera, shape)
     I = typeof(camera.position.i)
@@ -142,11 +128,10 @@ function try_move_player!(game_state, displacement)
     return nothing
 end
 
-function get_cursor_position_wrt_render_region(render_region, cursor_position)
+function get_cursor_position_wrt_render_region(render_region_position, render_region_height, render_region_width, cursor_position)
     i_window = cursor_position[1]
     j_window = cursor_position[2]
-    render_region_height, render_region_width = size(render_region)
-    top_padding, left_padding = render_region.indices[1].start - 1, render_region.indices[2].start - 1
+    top_padding, left_padding = render_region_position[1] - 1, render_region_position[2] - 1
 
     I = typeof(top_padding)
 
@@ -156,13 +141,17 @@ function get_cursor_position_wrt_render_region(render_region, cursor_position)
     return Vec(i_render_region, j_render_region)
 end
 
-function update_cursor_position!(game_state, render_region, cursor_position_wrt_window)
-    game_state.cursor_position = get_cursor_position_wrt_render_region(render_region, cursor_position_wrt_window)
+function update_cursor_position!(game_state)
+    cursor_position_wrt_window = Vec(game_state.ui_context.user_input_state.cursor.position.i, game_state.ui_context.user_input_state.cursor.position.j)
+    render_region = game_state.render_region
+    render_region_position = Vec(render_region.indices[1].start, render_region.indices[2].start)
+    game_state.cursor_position = get_cursor_position_wrt_render_region(render_region_position, size(render_region)..., cursor_position_wrt_window)
 
     return nothing
 end
 
-function update_player_direction!(game_state, render_region_height, render_region_width)
+function update_player_direction!(game_state)
+    render_region_height, render_region_width = size(game_state.render_region)
     player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, get_player_shape(game_state.player))
 
     player_center_wrt_render_region = SD.get_center(player_drawable_wrt_render_region)
@@ -200,4 +189,9 @@ function get_player_direction_shape_wrt_render_region(game_state, player_drawabl
     j_circumference = sign(j_player_direction) * isqrt(((player_radius_wrt_render_region * j_player_direction) ^ 2) ÷ player_direction_magnitude_squared)
 
     return SD.Line(player_center_wrt_render_region, SD.move(SD.Point(i_circumference, j_circumference), player_center_wrt_render_region.i, player_center_wrt_render_region.j))
+end
+
+function reset_ui_layout!(game_state)
+    game_state.ui_context.layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), size(game_state.render_region)...)
+    return nothing
 end

@@ -1,9 +1,10 @@
 import SimpleDraw as SD
 
-function draw_game!(render_region, game_state)
+function draw_game!(game_state)
+    render_region = game_state.render_region
     render_region_height, render_region_width = size(render_region)
 
-    SD.draw!(render_region, SD.Background(), 0x00cccccc)
+    SD.draw!(render_region, SD.Background(), game_state.background_color)
 
     player = game_state.player
     player_shape = get_player_shape(player)
@@ -12,14 +13,22 @@ function draw_game!(render_region, game_state)
 
     player_direction_shape_wrt_render_region = get_player_direction_shape_wrt_render_region(game_state, player_shape_wrt_render_region)
 
-    SD.draw!(render_region, player_shape_wrt_render_region, 0x000000ff)
+    SD.draw!(render_region, player_shape_wrt_render_region, game_state.player_color)
 
-    SD.draw!(render_region, player_direction_shape_wrt_render_region, 0x00000000)
+    SD.draw!(render_region, player_direction_shape_wrt_render_region, game_state.player_direction_color)
 
     for wall in game_state.walls
         wall_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, wall)
 
-        SD.draw!(render_region, wall_wrt_render_region, 0x00777777)
+        SD.draw!(render_region, wall_wrt_render_region, game_state.wall_color)
+    end
+
+    for drawable in game_state.ui_context.draw_list
+        # if isa(drawable, ShapeDrawable)
+            # SD.draw!(render_region, drawable.shape, drawable.color)
+        # else
+            SD.draw!(game_state.render_region, drawable)
+        # end
     end
 
     return nothing
