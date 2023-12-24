@@ -412,14 +412,10 @@ function start()
             push!(DEBUG_INFO.messages, "cursor position wrt window: $(game_state.ui_context.user_input_state.cursor.position)")
             push!(DEBUG_INFO.messages, "cursor position wrt rr: $(game_state.cursor_position)")
             push!(DEBUG_INFO.messages, "rr size: $(size(game_state.render_region))")
-            push!(DEBUG_INFO.messages, "player direction: $(game_state.player.direction)")
-
-            push!(DEBUG_INFO.messages, "player position: $(game_state.player.position)")
-            push!(DEBUG_INFO.messages, "player diameter: $(game_state.player.diameter)")
+            push!(DEBUG_INFO.messages, "player: $(game_state.player)")
 
             push!(DEBUG_INFO.messages, "camera position: $(game_state.camera.position)")
-            push!(DEBUG_INFO.messages, "camera height: $(game_state.camera.height)")
-            push!(DEBUG_INFO.messages, "camera width: $(game_state.camera.width)")
+            push!(DEBUG_INFO.messages, "camera size: $((game_state.camera.height, game_state.camera.width))")
 
             push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(game_state.camera, get_player_shape(game_state.player)).position)")
 
