@@ -12,7 +12,7 @@ function draw_game!(render_region, game_state)
 
     player_direction_shape_wrt_render_region = get_player_direction_shape_wrt_render_region(game_state, player_shape_wrt_render_region)
 
-    SD.draw!(render_region, player_shape_wrt_render_region, 0x000000ff)
+    SD.draw!(render_region, player_shape_wrt_render_region, game_state.player_color)
 
     SD.draw!(render_region, player_direction_shape_wrt_render_region, 0x00000000)
 

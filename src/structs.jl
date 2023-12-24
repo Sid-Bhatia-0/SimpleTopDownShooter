@@ -33,4 +33,5 @@ mutable struct GameState
     cursor_position::Vec
     walls::Vector{SD.FilledRectangle{Int}}
     background_color::UInt32
+    player_color::UInt32
 end

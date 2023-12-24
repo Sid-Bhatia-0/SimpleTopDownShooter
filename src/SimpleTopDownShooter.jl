@@ -164,6 +164,7 @@ function start()
         Vec(1, 1),
         walls,
         0x00cccccc, # background_color
+        0x000000ff, # player_color
     )
     update_camera!(game_state)
 
