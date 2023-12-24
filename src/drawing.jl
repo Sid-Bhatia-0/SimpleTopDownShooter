@@ -23,5 +23,13 @@ function draw_game!(game_state)
         SD.draw!(render_region, wall_wrt_render_region, game_state.wall_color)
     end
 
+    for drawable in game_state.ui_context.draw_list
+        # if isa(drawable, ShapeDrawable)
+            # SD.draw!(render_region, drawable.shape, drawable.color)
+        # else
+            SD.draw!(game_state.render_region, drawable)
+        # end
+    end
+
     return nothing
 end
