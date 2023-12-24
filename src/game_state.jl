@@ -141,7 +141,8 @@ function get_cursor_position_wrt_render_region(render_region_position, render_re
     return Vec(i_render_region, j_render_region)
 end
 
-function update_cursor_position!(game_state, cursor_position_wrt_window)
+function update_cursor_position!(game_state)
+    cursor_position_wrt_window = Vec(game_state.ui_context.user_input_state.cursor.position.i, game_state.ui_context.user_input_state.cursor.position.j)
     render_region = game_state.render_region
     render_region_position = Vec(render_region.indices[1].start, render_region.indices[2].start)
     game_state.cursor_position = get_cursor_position_wrt_render_region(render_region_position, size(render_region)..., cursor_position_wrt_window)

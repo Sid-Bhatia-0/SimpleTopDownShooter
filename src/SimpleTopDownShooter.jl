@@ -301,7 +301,7 @@ function start()
             push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
         end
 
-        update_cursor_position!(game_state, Vec(game_state.ui_context.user_input_state.cursor.position.i, game_state.ui_context.user_input_state.cursor.position.j))
+        update_cursor_position!(game_state)
         update_player_direction!(game_state)
 
         if SI.went_down(game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
