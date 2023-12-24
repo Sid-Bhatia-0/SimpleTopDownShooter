@@ -157,7 +157,14 @@ function start()
     ]
 
     # game state
-    game_state = GameState(1, player, camera, Vec(1, 1), walls)
+    game_state = GameState(
+        1,
+        player,
+        camera,
+        Vec(1, 1),
+        walls,
+        0x00cccccc, # background_color
+    )
     update_camera!(game_state)
 
     # # assets

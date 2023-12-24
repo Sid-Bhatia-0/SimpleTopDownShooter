@@ -32,4 +32,5 @@ mutable struct GameState
     camera::SD.Rectangle{Int}
     cursor_position::Vec
     walls::Vector{SD.FilledRectangle{Int}}
+    background_color::UInt32
 end
