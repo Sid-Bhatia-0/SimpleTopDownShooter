@@ -34,4 +34,5 @@ mutable struct GameState
     walls::Vector{SD.FilledRectangle{Int}}
     background_color::UInt32
     player_color::UInt32
+    player_direction_color::UInt32
 end
