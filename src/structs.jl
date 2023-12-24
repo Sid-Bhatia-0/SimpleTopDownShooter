@@ -35,4 +35,5 @@ mutable struct GameState
     background_color::UInt32
     player_color::UInt32
     player_direction_color::UInt32
+    wall_color::UInt32
 end
