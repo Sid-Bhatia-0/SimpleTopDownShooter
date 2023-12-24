@@ -77,7 +77,6 @@ function start()
     window_frame_buffer = zeros(UInt32, window_height, window_width) # 0xAABBGGRR
 
     render_region = get_render_region(window_frame_buffer, CAMERA_WIDTH_OVER_CAMERA_HEIGHT)
-    render_region_height, render_region_width = size(render_region)
 
     user_input_state = SI.UserInputState(
         SI.Cursor(SD.Point(1, 1)),
@@ -140,7 +139,7 @@ function start()
 
     user_interaction_state = SI.UserInteractionState(SI.NULL_WIDGET, SI.NULL_WIDGET, SI.NULL_WIDGET)
 
-    layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width))
+    layout = SI.BoxLayout(SD.Rectangle(SD.Point(1, 1), size(render_region)...))
 
     # player
     player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER, Vec(1, 0))
