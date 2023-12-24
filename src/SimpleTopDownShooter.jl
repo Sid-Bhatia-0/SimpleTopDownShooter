@@ -27,7 +27,7 @@ const MINIMUM_WINDOW_HEIGHT = 360
 const MINIMUM_WINDOW_WIDTH = 640
 const CAMERA_WIDTH_OVER_CAMERA_HEIGHT = CAMERA_WIDTH // CAMERA_HEIGHT
 
-include("structs.jl")
+include("types.jl")
 include("debug.jl")
 include("physics.jl")
 include("opengl_utils.jl")
