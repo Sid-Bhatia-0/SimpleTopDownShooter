@@ -190,3 +190,8 @@ function get_player_direction_shape_wrt_render_region(game_state, player_drawabl
 
     return SD.Line(player_center_wrt_render_region, SD.move(SD.Point(i_circumference, j_circumference), player_center_wrt_render_region.i, player_center_wrt_render_region.j))
 end
+
+function reset_ui_layout!(game_state)
+    game_state.ui_context.layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), size(game_state.render_region)...)
+    return nothing
+end

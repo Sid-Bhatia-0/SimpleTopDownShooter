@@ -364,7 +364,7 @@ function start()
             # entities[2] = (Accessors.@set player.velocity.y = NULL_VELOCITY.y)
         # end
 
-        layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), size(game_state.render_region)...)
+        reset_ui_layout!(game_state)
 
         # dt = previous_frame_time
         # if IS_DEBUG
