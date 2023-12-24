@@ -38,7 +38,9 @@ include("drawing.jl")
 # include("entity_component_system.jl")
 include("utils.jl")
 
-const DEBUG_INFO = DebugInfo()
+if IS_DEBUG
+    const DEBUG_INFO = DebugInfo()
+end
 
 # const PIXEL_LENGTH = 2^24
 
