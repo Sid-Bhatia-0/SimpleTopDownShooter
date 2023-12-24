@@ -38,5 +38,4 @@ mutable struct GameState
     wall_color::UInt32
     window_frame_buffer::Matrix{UInt32}
     render_region::SubArray{UInt32, 2, Matrix{UInt32}, Tuple{UnitRange{Int64}, UnitRange{Int64}}, false}
-    render_region_position::Vec
 end

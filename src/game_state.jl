@@ -142,7 +142,9 @@ function get_cursor_position_wrt_render_region(render_region_position, render_re
 end
 
 function update_cursor_position!(game_state, cursor_position_wrt_window)
-    game_state.cursor_position = get_cursor_position_wrt_render_region(game_state.render_region_position, size(game_state.render_region)..., cursor_position_wrt_window)
+    render_region = game_state.render_region
+    render_region_position = Vec(render_region.indices[1].start, render_region.indices[2].start)
+    game_state.cursor_position = get_cursor_position_wrt_render_region(render_region_position, size(render_region)..., cursor_position_wrt_window)
 
     return nothing
 end

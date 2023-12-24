@@ -169,7 +169,6 @@ function start()
         0x00777777, # wall_color
         window_frame_buffer,
         render_region,
-        Vec(render_region.indices[1].start, render_region.indices[2].start),
     )
     update_camera!(game_state)
 
