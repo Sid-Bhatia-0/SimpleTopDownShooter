@@ -461,7 +461,7 @@ function start()
             # if isa(drawable, ShapeDrawable)
                 # SD.draw!(render_region, drawable.shape, drawable.color)
             # else
-                SD.draw!(render_region, drawable)
+                SD.draw!(game_state.render_region, drawable)
             # end
         end
         draw_end_time = get_time(reference_time)
