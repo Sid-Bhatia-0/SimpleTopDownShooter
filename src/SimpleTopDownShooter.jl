@@ -301,33 +301,33 @@ function start()
             push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
         end
 
-        update_cursor_position!(game_state, Vec(user_input_state.cursor.position.i, user_input_state.cursor.position.j))
+        update_cursor_position!(game_state, Vec(game_state.ui_context.user_input_state.cursor.position.i, game_state.ui_context.user_input_state.cursor.position.j))
         update_player_direction!(game_state)
 
-        if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
+        if SI.went_down(game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])
             GLFW.SetWindowShouldClose(window, true)
             break
         end
 
-        if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1])
+        if SI.went_down(game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1])
             if IS_DEBUG
                 DEBUG_INFO.show_messages = !DEBUG_INFO.show_messages
             end
         end
 
-        if user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
             try_move_player!(game_state, Vec(-PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
-        if user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
             try_move_player!(game_state, Vec(PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
-        if user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
             try_move_player!(game_state, Vec(0, -PLAYER_VELOCITY_MAGNITUDE))
         end
 
-        if user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
             try_move_player!(game_state, Vec(0, PLAYER_VELOCITY_MAGNITUDE))
         end
 
@@ -410,7 +410,7 @@ function start()
 
             push!(DEBUG_INFO.messages, "avg. buffer swap time per frame: $(round(sum(DEBUG_INFO.buffer_swap_time_buffer) / (1e6 * length(DEBUG_INFO.buffer_swap_time_buffer)), digits = 2)) ms")
 
-            push!(DEBUG_INFO.messages, "cursor position wrt window: $(user_input_state.cursor.position)")
+            push!(DEBUG_INFO.messages, "cursor position wrt window: $(game_state.ui_context.user_input_state.cursor.position)")
             push!(DEBUG_INFO.messages, "cursor position wrt rr: $(game_state.cursor_position)")
             push!(DEBUG_INFO.messages, "rr size: $(size(game_state.render_region))")
             push!(DEBUG_INFO.messages, "player direction: $(game_state.player.direction)")
@@ -444,7 +444,7 @@ function start()
 
                     SI.do_widget!(
                         SI.TEXT,
-                        ui_context,
+                        game_state.ui_context,
                         SI.WidgetID(@__FILE__, @__LINE__, j),
                         text;
                         alignment = alignment,
@@ -483,7 +483,7 @@ function start()
             push!(DEBUG_INFO.buffer_swap_time_buffer, buffer_swap_end_time - buffer_swap_start_time)
         end
 
-        SI.reset!(user_input_state)
+        SI.reset!(game_state.ui_context.user_input_state)
 
         game_state.frame_number = game_state.frame_number + 1
 
