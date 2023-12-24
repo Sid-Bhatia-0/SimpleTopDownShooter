@@ -158,10 +158,10 @@ function start()
 
     # game state
     game_state = GameState(
-        1,
+        1, # frame_number
         player,
         camera,
-        Vec(1, 1),
+        Vec(1, 1), # cursor_position
         walls,
         0x00cccccc, # background_color
         0x000000ff, # player_color
