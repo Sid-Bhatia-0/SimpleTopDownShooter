@@ -156,22 +156,6 @@ function start()
         SD.FilledRectangle(SD.Point(1, 1), ARENA_WALL_THICKNESS, ARENA_WIDTH),
     ]
 
-    # game state
-    game_state = GameState(
-        1, # frame_number
-        player,
-        camera,
-        Vec(1, 1), # cursor_position
-        walls,
-        0x00cccccc, # background_color
-        0x000000ff, # player_color
-        0x00000000, # player_direction_color
-        0x00777777, # wall_color
-        window_frame_buffer,
-        render_region,
-    )
-    update_camera!(game_state)
-
     # # assets
     # color_type = BinaryTransparentColor{CT.RGBA{FPN.N0f8}}
     # texture_atlas = TextureAtlas(color_type[])
@@ -272,6 +256,23 @@ function start()
     draw_list = Any[]
 
     ui_context = SI.UIContext(user_interaction_state, user_input_state, layout, SI.DEFAULT_COLORS, draw_list)
+
+    # game state
+    game_state = GameState(
+        1, # frame_number
+        player,
+        camera,
+        Vec(1, 1), # cursor_position
+        walls,
+        0x00cccccc, # background_color
+        0x000000ff, # player_color
+        0x00000000, # player_direction_color
+        0x00777777, # wall_color
+        window_frame_buffer,
+        render_region,
+        ui_context,
+    )
+    update_camera!(game_state)
 
     # max_frames_per_second = 60
     # min_ns_per_frame = 1_000_000_000 ÷ max_frames_per_second

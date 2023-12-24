@@ -38,4 +38,5 @@ mutable struct GameState
     wall_color::UInt32
     window_frame_buffer::Matrix{UInt32}
     render_region::SubArray{UInt32, 2, Matrix{UInt32}, Tuple{UnitRange{Int64}, UnitRange{Int64}}, false}
+    ui_context::SI.UIContext{SI.WidgetID{String, Int64}, Int64, Int64, UInt32, Any}
 end
