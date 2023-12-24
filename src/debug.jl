@@ -1,21 +1,5 @@
 import DataStructures as DS
 
-mutable struct DebugInfo
-    show_messages::Bool
-    # show_collision_boxes::Bool
-    messages::Vector{String}
-    frame_start_time_buffer::DS.CircularBuffer{Int}
-    event_poll_time_buffer::DS.CircularBuffer{Int}
-    # dt_buffer::DS.CircularBuffer{Int}
-    # update_time_buffer::DS.CircularBuffer{Int}
-    # drawing_system_time_buffer::DS.CircularBuffer{Int}
-    draw_time_buffer::DS.CircularBuffer{Int}
-    texture_upload_time_buffer::DS.CircularBuffer{Int}
-    buffer_swap_time_buffer::DS.CircularBuffer{Int}
-    # sleep_time_theoretical_buffer::DS.CircularBuffer{Int}
-    # sleep_time_observed_buffer::DS.CircularBuffer{Int}
-end
-
 function DebugInfo()
     show_messages = true
     # show_collision_boxes = true

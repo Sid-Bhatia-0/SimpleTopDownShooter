@@ -1,20 +1,6 @@
 import SimpleDraw as SD
 
-struct Player
-    position::Vec
-    diameter::Int
-    direction::Vec
-end
-
 get_player_shape(player) = SD.FilledCircle(SD.Point(player.position...), player.diameter)
-
-mutable struct GameState
-    frame_number::Int
-    player::Player
-    camera::SD.Rectangle{Int}
-    cursor_position::Vec
-    walls::Vector{SD.FilledRectangle{Int}}
-end
 
 function get_shape_wrt_camera(camera, shape)
     I = typeof(camera.position.i)
