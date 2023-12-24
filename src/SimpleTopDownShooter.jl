@@ -168,6 +168,7 @@ function start()
         0x00000000, # player_direction_color
         0x00777777, # wall_color
         window_frame_buffer,
+        render_region,
     )
     update_camera!(game_state)
 
