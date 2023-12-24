@@ -363,7 +363,7 @@ function start()
             # entities[2] = (Accessors.@set player.velocity.y = NULL_VELOCITY.y)
         # end
 
-        layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), render_region_height, render_region_width)
+        layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), size(game_state.render_region)...)
 
         # dt = previous_frame_time
         # if IS_DEBUG
@@ -411,8 +411,7 @@ function start()
 
             push!(DEBUG_INFO.messages, "cursor position wrt window: $(user_input_state.cursor.position)")
             push!(DEBUG_INFO.messages, "cursor position wrt rr: $(game_state.cursor_position)")
-            push!(DEBUG_INFO.messages, "rr height: $(render_region_height)")
-            push!(DEBUG_INFO.messages, "rr width: $(render_region_width)")
+            push!(DEBUG_INFO.messages, "rr size: $(size(game_state.render_region))")
             push!(DEBUG_INFO.messages, "player direction: $(game_state.player.direction)")
 
             push!(DEBUG_INFO.messages, "player position: $(game_state.player.position)")
@@ -424,7 +423,7 @@ function start()
 
             push!(DEBUG_INFO.messages, "player position wrt camera: $(get_shape_wrt_camera(game_state.camera, get_player_shape(game_state.player)).position)")
 
-            player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, get_player_shape(game_state.player))
+            player_drawable_wrt_render_region = get_shape_wrt_render_region(game_state.camera, size(game_state.render_region)..., get_player_shape(game_state.player))
             push!(DEBUG_INFO.messages, "player position wrt rr: $(player_drawable_wrt_render_region.position)")
             push!(DEBUG_INFO.messages, "player diameter wrt rr: $(player_drawable_wrt_render_region.diameter)")
 
