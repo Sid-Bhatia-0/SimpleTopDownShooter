@@ -456,7 +456,7 @@ function start()
         draw_game!(game_state)
 
         draw_start_time = get_time(reference_time)
-        for drawable in draw_list
+        for drawable in game_state.ui_context.draw_list
             # if isa(drawable, ShapeDrawable)
                 # SD.draw!(render_region, drawable.shape, drawable.color)
             # else
@@ -467,7 +467,7 @@ function start()
         if IS_DEBUG
             push!(DEBUG_INFO.draw_time_buffer, draw_end_time - draw_start_time)
         end
-        empty!(draw_list)
+        empty!(game_state.ui_context.draw_list)
 
         texture_upload_start_time = get_time(reference_time)
         update_back_buffer(game_state.window_frame_buffer)
