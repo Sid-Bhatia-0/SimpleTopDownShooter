@@ -38,4 +38,5 @@ mutable struct GameState
     wall_color::UInt32
     window_frame_buffer::Matrix{UInt32}
     render_region::Matrix{UInt32}
+    render_region_position::Vec
 end

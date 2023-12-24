@@ -169,6 +169,7 @@ function start()
         0x00777777, # wall_color
         window_frame_buffer,
         render_region,
+        Vec(render_region.indices[1].start, render_region.indices[2].start),
     )
     update_camera!(game_state)
 
@@ -300,7 +301,7 @@ function start()
             push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
         end
 
-        update_cursor_position!(game_state, render_region, Vec(user_input_state.cursor.position.i, user_input_state.cursor.position.j))
+        update_cursor_position!(game_state, Vec(user_input_state.cursor.position.i, user_input_state.cursor.position.j))
         update_player_direction!(game_state, render_region_height, render_region_width)
 
         if SI.went_down(user_input_state.keyboard_buttons[Int(GLFW.KEY_ESCAPE) + 1])

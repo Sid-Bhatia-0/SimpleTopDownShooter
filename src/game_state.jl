@@ -128,11 +128,10 @@ function try_move_player!(game_state, displacement)
     return nothing
 end
 
-function get_cursor_position_wrt_render_region(render_region, cursor_position)
+function get_cursor_position_wrt_render_region(render_region_position, render_region_height, render_region_width, cursor_position)
     i_window = cursor_position[1]
     j_window = cursor_position[2]
-    render_region_height, render_region_width = size(render_region)
-    top_padding, left_padding = render_region.indices[1].start - 1, render_region.indices[2].start - 1
+    top_padding, left_padding = render_region_position[1] - 1, render_region_position[2] - 1
 
     I = typeof(top_padding)
 
@@ -142,8 +141,8 @@ function get_cursor_position_wrt_render_region(render_region, cursor_position)
     return Vec(i_render_region, j_render_region)
 end
 
-function update_cursor_position!(game_state, render_region, cursor_position_wrt_window)
-    game_state.cursor_position = get_cursor_position_wrt_render_region(render_region, cursor_position_wrt_window)
+function update_cursor_position!(game_state, cursor_position_wrt_window)
+    game_state.cursor_position = get_cursor_position_wrt_render_region(game_state.render_region_position, size(game_state.render_region)..., cursor_position_wrt_window)
 
     return nothing
 end
