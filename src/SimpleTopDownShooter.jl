@@ -454,7 +454,7 @@ function start()
             end
         end
 
-        draw_game!(render_region, game_state)
+        draw_game!(game_state)
 
         draw_start_time = get_time(reference_time)
         for drawable in draw_list

@@ -1,6 +1,7 @@
 import SimpleDraw as SD
 
-function draw_game!(render_region, game_state)
+function draw_game!(game_state)
+    render_region = game_state.render_region
     render_region_height, render_region_width = size(render_region)
 
     SD.draw!(render_region, SD.Background(), game_state.background_color)
