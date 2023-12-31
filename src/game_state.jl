@@ -208,6 +208,7 @@ function try_shoot!(game_state)
                 bullet.time_remaining,
             )
 
+            game_state.bullets[i] = new_bullet
             break
         end
     end

@@ -123,7 +123,7 @@ function start()
 
     GLFW.SetCursorPosCallback(window, cursor_position_callback)
     GLFW.SetKeyCallback(window, key_callback)
-    # GLFW.SetMouseButtonCallback(window, mouse_button_callback)
+    GLFW.SetMouseButtonCallback(window, mouse_button_callback)
     # GLFW.SetCharCallback(window, character_callback)
 
     MGL.glViewport(0, 0, window_width, window_height)
@@ -274,6 +274,7 @@ function start()
         0x00cccccc, # background_color
         0x000000ff, # player_color
         0x00000000, # player_direction_color
+        0x000000aa, # bullet_color
         0x00777777, # wall_color
         window_frame_buffer,
         render_region,
@@ -338,7 +339,7 @@ function start()
             try_move_player!(game_state, Vec(0, PLAYER_VELOCITY_MAGNITUDE))
         end
 
-        if game_state.ui_context.user_input_state.mouse_buttons[Int(GLFW.MOUSE_BUTTON_LEFT) + 1].ended_down
+        if SI.went_down(game_state.ui_context.user_input_state.mouse_buttons[Int(GLFW.MOUSE_BUTTON_LEFT) + 1])
             try_shoot!(game_state)
         end
 
@@ -421,6 +422,8 @@ function start()
 
             push!(DEBUG_INFO.messages, "avg. buffer swap time per frame: $(round(sum(DEBUG_INFO.buffer_swap_time_buffer) / (1e6 * length(DEBUG_INFO.buffer_swap_time_buffer)), digits = 2)) ms")
 
+            push!(DEBUG_INFO.messages, "clicked: $(SI.went_down(game_state.ui_context.user_input_state.mouse_buttons[Int(GLFW.MOUSE_BUTTON_LEFT) + 1]))")
+            push!(DEBUG_INFO.messages, "num_bullets: $(count(x -> x.is_alive, game_state.bullets))")
             push!(DEBUG_INFO.messages, "cursor position wrt window: $(game_state.ui_context.user_input_state.cursor.position)")
             push!(DEBUG_INFO.messages, "cursor position wrt rr: $(game_state.cursor_position)")
             push!(DEBUG_INFO.messages, "rr size: $(size(game_state.render_region))")
