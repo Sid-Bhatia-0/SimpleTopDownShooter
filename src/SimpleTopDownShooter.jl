@@ -21,6 +21,9 @@ const ARENA_WIDTH = 2 * CAMERA_WIDTH
 const ARENA_WALL_THICKNESS = CAMERA_HEIGHT ÷ 16
 const PLAYER_DIAMETER = CAMERA_HEIGHT ÷ 10 # world units
 const PLAYER_VELOCITY_MAGNITUDE = CAMERA_HEIGHT ÷ 200 # world units
+const MAX_BULLETS_PER_PLAYER = 256
+const BULLET_VELOCITY_MAGNITUDE = PLAYER_VELOCITY_MAGNITUDE ÷ 4 # world units
+const BULLET_DIAMETER = PLAYER_DIAMETER ÷ 4 # world units
 const DEFAULT_WINDOW_HEIGHT_NON_FULL_SCREEN = 550 # screen units
 const DEFAULT_WINDOW_WIDTH_NON_FULL_SCREEN = 910 # screen units
 const MINIMUM_WINDOW_HEIGHT = 360
@@ -144,6 +147,9 @@ function start()
     # player
     player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER, Vec(1, 0))
 
+    # player
+    bullets = fill(Bullet(false, Vec(0, 0), BULLET_DIAMETER, Vec(1, 0), 0), MAX_BULLETS_PER_PLAYER)
+
     # camera
     camera = SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH)
 
@@ -260,6 +266,7 @@ function start()
     game_state = GameState(
         1, # frame_number
         player,
+        bullets,
         camera,
         Vec(1, 1), # cursor_position
         walls,

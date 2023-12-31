@@ -26,9 +26,18 @@ struct Player
     direction::Vec
 end
 
+struct Bullet
+    is_alive::Bool
+    position::Vec
+    diameter::Int
+    direction::Vec
+    time_remaining::Int
+end
+
 mutable struct GameState
     frame_number::Int
     player::Player
+    bullets::Vector{Bullet}
     camera::SD.Rectangle{Int}
     cursor_position::Vec
     walls::Vector{SD.FilledRectangle{Int}}
