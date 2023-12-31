@@ -30,6 +30,7 @@ struct Bullet
     is_alive::Bool
     position::Vec
     diameter::Int
+    velocity_magnitude::Int
     direction::Vec
     time_remaining::Int
 end

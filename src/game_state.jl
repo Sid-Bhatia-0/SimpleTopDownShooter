@@ -195,3 +195,22 @@ function reset_ui_layout!(game_state)
     game_state.ui_context.layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), size(game_state.render_region)...)
     return nothing
 end
+
+function try_shoot!(game_state)
+    for (i, bullet) in enumerate(game_state.bullets)
+        if !bullet.is_alive
+            new_bullet = Bullet(
+                true,
+                game_state.player.position,
+                bullet.diameter,
+                bullet.velocity_magnitude,
+                game_state.player.direction,
+                bullet.time_remaining,
+            )
+
+            break
+        end
+    end
+
+    return nothing
+end

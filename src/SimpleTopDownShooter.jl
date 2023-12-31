@@ -24,6 +24,7 @@ const PLAYER_VELOCITY_MAGNITUDE = CAMERA_HEIGHT ÷ 200 # world units
 const MAX_BULLETS_PER_PLAYER = 256
 const BULLET_VELOCITY_MAGNITUDE = PLAYER_VELOCITY_MAGNITUDE ÷ 4 # world units
 const BULLET_DIAMETER = PLAYER_DIAMETER ÷ 4 # world units
+const BULLET_LIFETIME = 4 * 10 ^ 9 # nanoseconds
 const DEFAULT_WINDOW_HEIGHT_NON_FULL_SCREEN = 550 # screen units
 const DEFAULT_WINDOW_WIDTH_NON_FULL_SCREEN = 910 # screen units
 const MINIMUM_WINDOW_HEIGHT = 360
@@ -108,11 +109,11 @@ function start()
         return nothing
     end
 
-    # function mouse_button_callback(window, button, action, mods)::Cvoid
-        # user_input_state.mouse_buttons[Int(button) + 1] = update_button(user_input_state.mouse_buttons[Int(button) + 1], action)
+    function mouse_button_callback(window, button, action, mods)::Cvoid
+        user_input_state.mouse_buttons[Int(button) + 1] = update_button(user_input_state.mouse_buttons[Int(button) + 1], action)
 
-        # return nothing
-    # end
+        return nothing
+    end
 
     # function character_callback(window, unicode_codepoint)::Cvoid
         # push!(user_input_state.characters, Char(unicode_codepoint))
@@ -148,7 +149,7 @@ function start()
     player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER, Vec(1, 0))
 
     # player
-    bullets = fill(Bullet(false, Vec(0, 0), BULLET_DIAMETER, Vec(1, 0), 0), MAX_BULLETS_PER_PLAYER)
+    bullets = fill(Bullet(false, Vec(0, 0), BULLET_DIAMETER, BULLET_VELOCITY_MAGNITUDE, Vec(1, 0), BULLET_LIFETIME), MAX_BULLETS_PER_PLAYER)
 
     # camera
     camera = SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH)
@@ -335,6 +336,10 @@ function start()
 
         if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
             try_move_player!(game_state, Vec(0, PLAYER_VELOCITY_MAGNITUDE))
+        end
+
+        if game_state.ui_context.user_input_state.mouse_buttons[Int(GLFW.MOUSE_BUTTON_LEFT) + 1].ended_down
+            try_shoot!(game_state)
         end
 
         update_camera!(game_state)
