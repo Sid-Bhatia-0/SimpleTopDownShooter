@@ -22,7 +22,7 @@ const ARENA_WALL_THICKNESS = CAMERA_HEIGHT ÷ 16
 const PLAYER_DIAMETER = CAMERA_HEIGHT ÷ 10 # world units
 const PLAYER_VELOCITY_MAGNITUDE = CAMERA_HEIGHT ÷ 200 # world units
 const MAX_BULLETS_PER_PLAYER = 256
-const BULLET_VELOCITY_MAGNITUDE = PLAYER_VELOCITY_MAGNITUDE ÷ 4 # world units
+const BULLET_VELOCITY_MAGNITUDE = PLAYER_VELOCITY_MAGNITUDE * 2 # world units
 const BULLET_DIAMETER = PLAYER_DIAMETER ÷ 4 # world units
 const BULLET_LIFETIME = 4 * 10 ^ 9 # nanoseconds
 const DEFAULT_WINDOW_HEIGHT_NON_FULL_SCREEN = 550 # screen units
@@ -149,7 +149,7 @@ function start()
     player = Player(Vec(CAMERA_HEIGHT ÷ 2, CAMERA_WIDTH ÷ 2), PLAYER_DIAMETER, Vec(1, 0))
 
     # player
-    bullets = fill(Bullet(false, Vec(0, 0), BULLET_DIAMETER, BULLET_VELOCITY_MAGNITUDE, Vec(1, 0), BULLET_LIFETIME), MAX_BULLETS_PER_PLAYER)
+    bullets = fill(Bullet(false, Vec(0, 0), BULLET_DIAMETER, BULLET_VELOCITY_MAGNITUDE, Vec(1, 0), 0, BULLET_LIFETIME), MAX_BULLETS_PER_PLAYER)
 
     # camera
     camera = SD.Rectangle(SD.Point(1, 1), CAMERA_HEIGHT, CAMERA_WIDTH)
@@ -263,8 +263,11 @@ function start()
 
     ui_context = SI.UIContext(user_interaction_state, user_input_state, layout, SI.DEFAULT_COLORS, draw_list)
 
+    reference_time = time_ns()
+
     # game state
     game_state = GameState(
+        reference_time,
         1, # frame_number
         player,
         bullets,
@@ -286,7 +289,6 @@ function start()
     # min_ns_per_frame = 1_000_000_000 ÷ max_frames_per_second
     # min_μs_per_frame = 1_000_000 ÷ max_frames_per_second
 
-    reference_time = time_ns()
     previous_frame_start_time = 0
 
     while !GLFW.WindowShouldClose(window)
@@ -294,7 +296,7 @@ function start()
             empty!(DEBUG_INFO.messages)
         end
 
-        frame_start_time = get_time(reference_time)
+        frame_start_time = get_time(game_state.reference_time)
         previous_frame_end_time = frame_start_time
         previous_frame_time = previous_frame_end_time - previous_frame_start_time
         previous_frame_start_time = frame_start_time
@@ -302,9 +304,9 @@ function start()
             push!(DEBUG_INFO.frame_start_time_buffer, frame_start_time)
         end
 
-        event_poll_start_time = get_time(reference_time)
+        event_poll_start_time = get_time(game_state.reference_time)
         GLFW.PollEvents()
-        event_poll_end_time = get_time(reference_time)
+        event_poll_end_time = get_time(game_state.reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.event_poll_time_buffer, event_poll_end_time - event_poll_start_time)
         end
@@ -383,6 +385,7 @@ function start()
             # push!(DEBUG_INFO.dt_buffer, dt)
         # end
 
+        update_bullets!(game_state)
         # update_start_time = get_time(reference_time)
         # update!(entities, dt)
         # update_end_time = get_time(reference_time)
@@ -424,6 +427,12 @@ function start()
 
             push!(DEBUG_INFO.messages, "clicked: $(SI.went_down(game_state.ui_context.user_input_state.mouse_buttons[Int(GLFW.MOUSE_BUTTON_LEFT) + 1]))")
             push!(DEBUG_INFO.messages, "num_bullets: $(count(x -> x.is_alive, game_state.bullets))")
+            next_bullet_velocity = get_velocity(BULLET_VELOCITY_MAGNITUDE, game_state.player.direction)
+            next_bullet_velocity_magnitude = isqrt(next_bullet_velocity[1] ^ 2 + next_bullet_velocity[2] ^ 2)
+            push!(DEBUG_INFO.messages, "BULLET_VELOCITY_MAGNITUDE: $(BULLET_VELOCITY_MAGNITUDE)")
+            push!(DEBUG_INFO.messages, "PLAYER_VELOCITY_MAGNITUDE: $(PLAYER_VELOCITY_MAGNITUDE)")
+            push!(DEBUG_INFO.messages, "next_bullet_velocity: $(next_bullet_velocity)")
+            push!(DEBUG_INFO.messages, "next_bullet_velocity_magnitude: $(next_bullet_velocity_magnitude)")
             push!(DEBUG_INFO.messages, "cursor position wrt window: $(game_state.ui_context.user_input_state.cursor.position)")
             push!(DEBUG_INFO.messages, "cursor position wrt rr: $(game_state.cursor_position)")
             push!(DEBUG_INFO.messages, "rr size: $(size(game_state.render_region))")
@@ -463,24 +472,24 @@ function start()
             end
         end
 
-        draw_start_time = get_time(reference_time)
+        draw_start_time = get_time(game_state.reference_time)
         draw_game!(game_state)
-        draw_end_time = get_time(reference_time)
+        draw_end_time = get_time(game_state.reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.draw_time_buffer, draw_end_time - draw_start_time)
         end
         empty!(game_state.ui_context.draw_list)
 
-        texture_upload_start_time = get_time(reference_time)
+        texture_upload_start_time = get_time(game_state.reference_time)
         update_back_buffer(game_state.window_frame_buffer)
-        texture_upload_end_time = get_time(reference_time)
+        texture_upload_end_time = get_time(game_state.reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.texture_upload_time_buffer, texture_upload_end_time - texture_upload_start_time)
         end
 
-        buffer_swap_start_time = get_time(reference_time)
+        buffer_swap_start_time = get_time(game_state.reference_time)
         GLFW.SwapBuffers(window)
-        buffer_swap_end_time = get_time(reference_time)
+        buffer_swap_end_time = get_time(game_state.reference_time)
         if IS_DEBUG
             push!(DEBUG_INFO.buffer_swap_time_buffer, buffer_swap_end_time - buffer_swap_start_time)
         end

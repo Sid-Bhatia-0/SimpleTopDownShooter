@@ -32,10 +32,12 @@ struct Bullet
     diameter::Int
     velocity_magnitude::Int
     direction::Vec
-    time_remaining::Int
+    time_created::Int
+    lifetime::Int
 end
 
 mutable struct GameState
+    reference_time::Int
     frame_number::Int
     player::Player
     bullets::Vector{Bullet}

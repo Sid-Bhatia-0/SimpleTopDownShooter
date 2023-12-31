@@ -205,11 +205,54 @@ function try_shoot!(game_state)
                 bullet.diameter,
                 bullet.velocity_magnitude,
                 game_state.player.direction,
-                bullet.time_remaining,
+                get_time(game_state.reference_time),
+                bullet.lifetime,
             )
 
             game_state.bullets[i] = new_bullet
             break
+        end
+    end
+
+    return nothing
+end
+
+function get_velocity(velocity_magnitude, direction)
+    direction_magnitude_squared = direction[1] ^ 2 + direction[2] ^ 2
+    return Vec(
+        sign(direction[1]) * isqrt((velocity_magnitude * direction[1]) ^ 2 ÷ direction_magnitude_squared),
+        sign(direction[2]) * isqrt((velocity_magnitude * direction[2]) ^ 2 ÷ direction_magnitude_squared),
+    )
+end
+
+function update_bullets!(game_state)
+    t = get_time(game_state.reference_time)
+    for (i, bullet) in enumerate(game_state.bullets)
+        if bullet.is_alive
+            if t - bullet.time_created >= bullet.lifetime
+                new_bullet = Bullet(
+                    false,
+                    bullet.position,
+                    bullet.diameter,
+                    bullet.velocity_magnitude,
+                    bullet.direction,
+                    bullet.time_created,
+                    bullet.lifetime,
+                )
+            else
+                new_bullet = Bullet(
+                    true,
+                    bullet.position + get_velocity(bullet.velocity_magnitude, bullet.direction),
+                    bullet.diameter,
+                    bullet.velocity_magnitude,
+                    bullet.direction,
+                    bullet.time_created,
+                    bullet.lifetime,
+                )
+            end
+
+            game_state.bullets[i] = new_bullet
+            # kill it if collide? what happens if it collides with another player. So, maybe not check collisions here. But rather just move it and check/handle collisions somewhere else. This will not produce any artifacts because bullet will go away immediately?
         end
     end
 
