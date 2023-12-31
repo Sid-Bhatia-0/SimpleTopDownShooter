@@ -18,10 +18,12 @@ function draw_game!(game_state)
     SD.draw!(render_region, player_direction_shape_wrt_render_region, game_state.player_direction_color)
 
     for bullet in game_state.bullets
-        bullet_shape = get_player_shape(bullet)
-        bullet_shape_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, bullet_shape)
+        if bullet.is_alive
+            bullet_shape = get_player_shape(bullet)
+            bullet_shape_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, bullet_shape)
 
-        SD.draw!(render_region, bullet_shape_wrt_render_region, game_state.bullet_color)
+            SD.draw!(render_region, bullet_shape_wrt_render_region, game_state.bullet_color)
+        end
     end
 
     for wall in game_state.walls
