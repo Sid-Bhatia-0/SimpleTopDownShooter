@@ -319,25 +319,25 @@ function start()
             break
         end
 
-        if SI.went_down(game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1])
+        if SI.went_down(game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_V) + 1])
             if IS_DEBUG
                 DEBUG_INFO.show_messages = !DEBUG_INFO.show_messages
             end
         end
 
-        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_UP) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_W) + 1].ended_down
             try_move_player!(game_state, Vec(-PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
-        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_DOWN) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_S) + 1].ended_down
             try_move_player!(game_state, Vec(PLAYER_VELOCITY_MAGNITUDE, 0))
         end
 
-        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_LEFT) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_A) + 1].ended_down
             try_move_player!(game_state, Vec(0, -PLAYER_VELOCITY_MAGNITUDE))
         end
 
-        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_RIGHT) + 1].ended_down
+        if game_state.ui_context.user_input_state.keyboard_buttons[Int(GLFW.KEY_D) + 1].ended_down
             try_move_player!(game_state, Vec(0, PLAYER_VELOCITY_MAGNITUDE))
         end
 
