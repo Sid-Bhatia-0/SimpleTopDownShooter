@@ -1,3 +1,4 @@
+import Accessors
 import SimpleDraw as SD
 
 get_player_shape(player) = SD.FilledCircle(SD.Point(player.position...), player.diameter)
@@ -109,7 +110,7 @@ function get_render_region(window_frame_buffer, camera_height_over_camera_width)
     return render_region
 end
 
-move(player, displacement) = Player(player.position + displacement, player.diameter, player.direction)
+move(player, displacement) = Accessors.@set player.position = player.position + displacement
 
 function try_move_player!(game_state, displacement)
     player = game_state.player
@@ -170,7 +171,8 @@ function update_player_direction!(game_state)
         j_player_direction = one(j_player_direction)
     end
 
-    game_state.player = Player(game_state.player.position, game_state.player.diameter, Vec(i_player_direction, j_player_direction))
+    player = game_state.player
+    game_state.player = Accessors.@set player.direction = Vec(i_player_direction, j_player_direction)
 
     return nothing
 end
@@ -232,39 +234,16 @@ function update_bullets!(game_state)
     t = get_time(game_state.reference_time)
     for (i, bullet) in enumerate(game_state.bullets)
         if bullet.is_alive
+            new_bullet = bullet
             if t - bullet.time_created >= bullet.lifetime
-                new_bullet = Bullet(
-                    false,
-                    bullet.position,
-                    bullet.diameter,
-                    bullet.velocity_magnitude,
-                    bullet.direction,
-                    bullet.time_created,
-                    bullet.lifetime,
-                )
+                Accessors.@reset new_bullet.is_alive = false
             else
-                new_bullet = Bullet(
-                    true,
-                    bullet.position + get_velocity(bullet.velocity_magnitude, bullet.direction),
-                    bullet.diameter,
-                    bullet.velocity_magnitude,
-                    bullet.direction,
-                    bullet.time_created,
-                    bullet.lifetime,
-                )
+                Accessors.@reset new_bullet.position = new_bullet.position + get_velocity(new_bullet.velocity_magnitude, new_bullet.direction)
 
                 new_bullet_shape = get_bullet_shape(new_bullet)
                 for wall in game_state.walls
                     if is_colliding(wall, new_bullet_shape)
-                        new_bullet = Bullet(
-                            false,
-                            bullet.position,
-                            bullet.diameter,
-                            bullet.velocity_magnitude,
-                            bullet.direction,
-                            bullet.time_created,
-                            bullet.lifetime,
-                        )
+                        Accessors.@reset new_bullet.is_alive = false
                         break
                     end
                 end
