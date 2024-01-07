@@ -271,7 +271,6 @@ function update_bullets!(game_state)
             end
 
             game_state.bullets[i] = new_bullet
-            # kill it if collide? what happens if it collides with another player. So, maybe not check collisions here. But rather just move it and check/handle collisions somewhere else. This will not produce any artifacts because bullet will go away immediately?
         end
     end
 
