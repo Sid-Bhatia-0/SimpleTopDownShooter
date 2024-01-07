@@ -1,6 +1,6 @@
 module SimpleTopDownShooter
 
-# import Accessors
+import Accessors
 import ModernGL as MGL
 import DataStructures as DS
 import GLFW
