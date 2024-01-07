@@ -26,15 +26,28 @@ struct Player
     direction::Vec
 end
 
+struct Bullet
+    is_alive::Bool
+    position::Vec
+    diameter::Int
+    velocity_magnitude::Int
+    direction::Vec
+    time_created::Int
+    lifetime::Int
+end
+
 mutable struct GameState
+    reference_time::Int
     frame_number::Int
     player::Player
+    bullets::Vector{Bullet}
     camera::SD.Rectangle{Int}
     cursor_position::Vec
     walls::Vector{SD.FilledRectangle{Int}}
     background_color::UInt32
     player_color::UInt32
     player_direction_color::UInt32
+    bullet_color::UInt32
     wall_color::UInt32
     window_frame_buffer::Matrix{UInt32}
     render_region::SubArray{UInt32, 2, Matrix{UInt32}, Tuple{UnitRange{Int64}, UnitRange{Int64}}, false}

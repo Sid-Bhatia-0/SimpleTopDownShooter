@@ -1,6 +1,7 @@
 import SimpleDraw as SD
 
 get_player_shape(player) = SD.FilledCircle(SD.Point(player.position...), player.diameter)
+get_bullet_shape(bullet) = SD.FilledCircle(SD.Point(bullet.position...), bullet.diameter)
 
 function get_shape_wrt_camera(camera, shape)
     I = typeof(camera.position.i)
@@ -193,5 +194,85 @@ end
 
 function reset_ui_layout!(game_state)
     game_state.ui_context.layout.reference_bounding_box = SD.Rectangle(SD.Point(1, 1), size(game_state.render_region)...)
+    return nothing
+end
+
+function try_shoot!(game_state)
+    for (i, bullet) in enumerate(game_state.bullets)
+        if !bullet.is_alive
+            bullet_radius = bullet.diameter ÷ 2
+            new_bullet_position = Vec(SD.get_center(get_bullet_shape(game_state.player))) .- bullet_radius
+            new_bullet = Bullet(
+                true,
+                new_bullet_position,
+                bullet.diameter,
+                bullet.velocity_magnitude,
+                game_state.player.direction,
+                get_time(game_state.reference_time),
+                bullet.lifetime,
+            )
+
+            game_state.bullets[i] = new_bullet
+            break
+        end
+    end
+
+    return nothing
+end
+
+function get_velocity(velocity_magnitude, direction)
+    direction_magnitude_squared = direction[1] ^ 2 + direction[2] ^ 2
+    return Vec(
+        sign(direction[1]) * isqrt((velocity_magnitude * direction[1]) ^ 2 ÷ direction_magnitude_squared),
+        sign(direction[2]) * isqrt((velocity_magnitude * direction[2]) ^ 2 ÷ direction_magnitude_squared),
+    )
+end
+
+function update_bullets!(game_state)
+    t = get_time(game_state.reference_time)
+    for (i, bullet) in enumerate(game_state.bullets)
+        if bullet.is_alive
+            if t - bullet.time_created >= bullet.lifetime
+                new_bullet = Bullet(
+                    false,
+                    bullet.position,
+                    bullet.diameter,
+                    bullet.velocity_magnitude,
+                    bullet.direction,
+                    bullet.time_created,
+                    bullet.lifetime,
+                )
+            else
+                new_bullet = Bullet(
+                    true,
+                    bullet.position + get_velocity(bullet.velocity_magnitude, bullet.direction),
+                    bullet.diameter,
+                    bullet.velocity_magnitude,
+                    bullet.direction,
+                    bullet.time_created,
+                    bullet.lifetime,
+                )
+
+                new_bullet_shape = get_bullet_shape(new_bullet)
+                for wall in game_state.walls
+                    if is_colliding(wall, new_bullet_shape)
+                        new_bullet = Bullet(
+                            false,
+                            bullet.position,
+                            bullet.diameter,
+                            bullet.velocity_magnitude,
+                            bullet.direction,
+                            bullet.time_created,
+                            bullet.lifetime,
+                        )
+                        break
+                    end
+                end
+            end
+
+            game_state.bullets[i] = new_bullet
+        end
+    end
+
     return nothing
 end
