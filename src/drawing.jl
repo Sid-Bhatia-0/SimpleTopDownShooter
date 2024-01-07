@@ -19,7 +19,7 @@ function draw_game!(game_state)
 
     for bullet in game_state.bullets
         if bullet.is_alive
-            bullet_shape = get_player_shape(bullet)
+            bullet_shape = get_bullet_shape(bullet)
             bullet_shape_wrt_render_region = get_shape_wrt_render_region(game_state.camera, render_region_height, render_region_width, bullet_shape)
 
             SD.draw!(render_region, bullet_shape_wrt_render_region, game_state.bullet_color)

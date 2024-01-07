@@ -1,6 +1,7 @@
 import SimpleDraw as SD
 
 get_player_shape(player) = SD.FilledCircle(SD.Point(player.position...), player.diameter)
+get_bullet_shape(bullet) = SD.FilledCircle(SD.Point(bullet.position...), bullet.diameter)
 
 function get_shape_wrt_camera(camera, shape)
     I = typeof(camera.position.i)
@@ -200,7 +201,7 @@ function try_shoot!(game_state)
     for (i, bullet) in enumerate(game_state.bullets)
         if !bullet.is_alive
             bullet_radius = bullet.diameter ÷ 2
-            new_bullet_position = Vec(SD.get_center(get_player_shape(game_state.player))) .- bullet_radius
+            new_bullet_position = Vec(SD.get_center(get_bullet_shape(game_state.player))) .- bullet_radius
             new_bullet = Bullet(
                 true,
                 new_bullet_position,
@@ -252,7 +253,7 @@ function update_bullets!(game_state)
                     bullet.lifetime,
                 )
 
-                new_bullet_shape = get_player_shape(new_bullet)
+                new_bullet_shape = get_bullet_shape(new_bullet)
                 for wall in game_state.walls
                     if is_colliding(wall, new_bullet_shape)
                         new_bullet = Bullet(
