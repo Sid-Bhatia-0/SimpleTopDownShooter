@@ -251,6 +251,22 @@ function update_bullets!(game_state)
                     bullet.time_created,
                     bullet.lifetime,
                 )
+
+                new_bullet_shape = get_player_shape(new_bullet)
+                for wall in game_state.walls
+                    if is_colliding(wall, new_bullet_shape)
+                        new_bullet = Bullet(
+                            false,
+                            bullet.position,
+                            bullet.diameter,
+                            bullet.velocity_magnitude,
+                            bullet.direction,
+                            bullet.time_created,
+                            bullet.lifetime,
+                        )
+                        break
+                    end
+                end
             end
 
             game_state.bullets[i] = new_bullet
