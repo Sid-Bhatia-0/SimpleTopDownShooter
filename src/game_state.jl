@@ -199,9 +199,11 @@ end
 function try_shoot!(game_state)
     for (i, bullet) in enumerate(game_state.bullets)
         if !bullet.is_alive
+            bullet_radius = bullet.diameter ÷ 2
+            new_bullet_position = Vec(SD.get_center(get_player_shape(game_state.player))) .- bullet_radius
             new_bullet = Bullet(
                 true,
-                game_state.player.position,
+                new_bullet_position,
                 bullet.diameter,
                 bullet.velocity_magnitude,
                 game_state.player.direction,
