@@ -234,39 +234,16 @@ function update_bullets!(game_state)
     t = get_time(game_state.reference_time)
     for (i, bullet) in enumerate(game_state.bullets)
         if bullet.is_alive
+            new_bullet = bullet
             if t - bullet.time_created >= bullet.lifetime
-                new_bullet = Bullet(
-                    false,
-                    bullet.position,
-                    bullet.diameter,
-                    bullet.velocity_magnitude,
-                    bullet.direction,
-                    bullet.time_created,
-                    bullet.lifetime,
-                )
+                Accessors.@reset new_bullet.is_alive = false
             else
-                new_bullet = Bullet(
-                    true,
-                    bullet.position + get_velocity(bullet.velocity_magnitude, bullet.direction),
-                    bullet.diameter,
-                    bullet.velocity_magnitude,
-                    bullet.direction,
-                    bullet.time_created,
-                    bullet.lifetime,
-                )
+                Accessors.@reset new_bullet.position = new_bullet.position + get_velocity(new_bullet.velocity_magnitude, new_bullet.direction)
 
                 new_bullet_shape = get_bullet_shape(new_bullet)
                 for wall in game_state.walls
                     if is_colliding(wall, new_bullet_shape)
-                        new_bullet = Bullet(
-                            false,
-                            bullet.position,
-                            bullet.diameter,
-                            bullet.velocity_magnitude,
-                            bullet.direction,
-                            bullet.time_created,
-                            bullet.lifetime,
-                        )
+                        Accessors.@reset new_bullet.is_alive = false
                         break
                     end
                 end
