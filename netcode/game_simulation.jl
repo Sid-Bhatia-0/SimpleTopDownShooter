@@ -1,7 +1,6 @@
 import Statistics
 
 struct DebugInfo
-    frame_start_time_buffer::Vector{Int}
     update_time_theoretical_buffer::Vector{Int}
     update_time_observed_buffer::Vector{Int}
     sleep_time_theoretical_buffer::Vector{Int}
@@ -32,19 +31,12 @@ function start()
     total_frames = frames_per_second * 2
     ns_per_frame = 1_000_000_000 ÷ frames_per_second
 
-    debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[])
+    debug_info = DebugInfo(Int[], Int[], Int[], Int[])
     game_state = GameState(0, 1)
 
-    previous_frame_start_time = 0
     game_state.reference_time = time_ns()
 
     while game_state.frame_number <= total_frames
-        frame_start_time = get_time(game_state.reference_time)
-        previous_frame_end_time = frame_start_time
-        previous_frame_time = previous_frame_end_time - previous_frame_start_time
-        previous_frame_start_time = frame_start_time
-        push!(debug_info.frame_start_time_buffer, frame_start_time)
-
         # GLFW.PollEvents()
 
         update_time_theoretical = 2_000_000
