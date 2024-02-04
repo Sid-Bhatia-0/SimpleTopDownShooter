@@ -1,5 +1,5 @@
-import Statistics
 import DataFrames as DF
+import Statistics
 
 struct DebugInfo
     frame_end_time_buffer::Vector{Int}
