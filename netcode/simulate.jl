@@ -80,7 +80,7 @@ function create_df_debug_info(debug_info)
     )
 end
 
-function start_server_and_fill_room(server_host, server_port, room_size)
+function start_server(server_host, server_port, room_size)
     room = fill(NULL_CLIENT_SLOT, 3)
 
     server = Sockets.listen(server_host, server_port)
@@ -99,7 +99,7 @@ function start_server_and_fill_room(server_host, server_port, room_size)
 
     @info "Room full" server room
 
-    return server, room
+    return nothing
 end
 
 function start_client(server_host, server_port)
@@ -111,7 +111,7 @@ function start_client(server_host, server_port)
 
     @info "Client connected to server" client_host client_port
 
-    return socket
+    return nothing
 end
 
 function start()
@@ -161,9 +161,9 @@ else
 end
 
 if IS_SERVER
-    server, room = start_server_and_fill_room(SERVER_HOST, SERVER_PORT, ROOM_SIZE)
+    start_server(SERVER_HOST, SERVER_PORT, ROOM_SIZE)
 else
-    socket = start_client(SERVER_HOST, SERVER_PORT)
+    start_client(SERVER_HOST, SERVER_PORT)
 end
 
 # start()
