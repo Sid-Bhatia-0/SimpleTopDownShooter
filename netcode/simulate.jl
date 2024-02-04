@@ -1,5 +1,14 @@
 import DataFrames as DF
+import Sockets
 import Statistics
+
+const ROOM_SIZE = 3
+
+const SERVER_HOST = Sockets.localhost
+const SERVER_PORT = 10000
+
+const CLIENT_HOSTS = [Sockets.localhost for _ in 1:ROOM_SIZE]
+const CLIENT_PORTS = SERVER_PORT + 1 : SERVER_PORT + ROOM_SIZE
 
 struct DebugInfo
     frame_end_time_buffer::Vector{Int}
@@ -97,16 +106,22 @@ function start()
     return nothing
 end
 
-@assert length(ARGS) == 1
-
 if ARGS[1] == "--server"
-    @info "Running server"
-elseif ARGS[1] == "--client1"
-    @info "Running client1"
-elseif ARGS[1] == "--client2"
-    @info "Running client2"
-elseif ARGS[1] == "--client3"
-    @info "Running client3"
+    @assert length(ARGS) == 1
+    IS_SERVER = true
+
+    @info "Running as server at host $(SERVER_HOST) port $(SERVER_PORT)"
+elseif ARGS[1] == "--client"
+    @assert length(ARGS) == 2
+    IS_SERVER = false
+
+    THIS_CLIENT_ID = parse(Int, ARGS[2])
+    @assert THIS_CLIENT_ID in 1:ROOM_SIZE
+
+    CLIENT_HOST = CLIENT_HOSTS[THIS_CLIENT_ID]
+    CLIENT_PORT = CLIENT_PORTS[THIS_CLIENT_ID]
+
+    @info "Running as client at host $(CLIENT_HOST) port $(CLIENT_PORT)"
 else
     error("Invalid command line argument $(ARGS[1])")
 end
