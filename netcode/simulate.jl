@@ -90,9 +90,9 @@ function start_server_and_fill_room(server_host, server_port, room_size)
         client_slot = ClientSlot(true, Sockets.accept(server))
         room[i] = client_slot
 
-        socket_peer_name = Sockets.getpeername(client_slot.socket)
-        client_host = socket_peer_name[1]
-        client_port = Int(socket_peer_name[2])
+        peername = Sockets.getpeername(client_slot.socket)
+        client_host = peername[1]
+        client_port = Int(peername[2])
 
         @info "Socket accepted" client_host client_port
     end
