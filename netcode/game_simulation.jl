@@ -97,4 +97,14 @@ function start()
     return nothing
 end
 
-start()
+@assert isone(length(ARGS))
+
+if ARGS[1] == "--server"
+    @info "Running server"
+elseif ARGS[1] == "--client"
+    @info "Running client"
+else
+    error("Invalid command line argument $(ARGS[1])")
+end
+
+# start()
