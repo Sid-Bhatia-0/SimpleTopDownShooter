@@ -97,12 +97,16 @@ function start()
     return nothing
 end
 
-@assert isone(length(ARGS))
+@assert length(ARGS) == 1
 
 if ARGS[1] == "--server"
     @info "Running server"
-elseif ARGS[1] == "--client"
-    @info "Running client"
+elseif ARGS[1] == "--client1"
+    @info "Running client1"
+elseif ARGS[1] == "--client2"
+    @info "Running client2"
+elseif ARGS[1] == "--client3"
+    @info "Running client3"
 else
     error("Invalid command line argument $(ARGS[1])")
 end
