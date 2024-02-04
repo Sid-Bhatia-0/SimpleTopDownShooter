@@ -7,8 +7,14 @@ const ROOM_SIZE = 3
 const SERVER_HOST = Sockets.localhost
 const SERVER_PORT = 10000
 
-const CLIENT_HOSTS = [Sockets.localhost for _ in 1:ROOM_SIZE]
-const CLIENT_PORTS = SERVER_PORT + 1 : SERVER_PORT + ROOM_SIZE
+const NULL_TCP_SOCKET = Sockets.TCPSocket()
+
+struct ClientSlot
+    is_used::Bool
+    socket::Sockets.TCPSocket
+end
+
+const NULL_CLIENT_SLOT = ClientSlot(false, NULL_TCP_SOCKET)
 
 struct DebugInfo
     frame_end_time_buffer::Vector{Int}
@@ -74,6 +80,28 @@ function create_df_debug_info(debug_info)
     )
 end
 
+function start_server_and_fill_room(server_host, server_port, room_size)
+    room = fill(NULL_CLIENT_SLOT, 3)
+
+    server = Sockets.listen(server_host, server_port)
+    @info "Server started listening"
+
+    for i in 1:ROOM_SIZE
+        client_slot = ClientSlot(true, Sockets.accept(server))
+        room[i] = client_slot
+
+        socket_peer_name = Sockets.getpeername(client_slot.socket)
+        client_host = socket_peer_name[1]
+        client_port = Int(socket_peer_name[2])
+
+        @info "Socket accepted" client_host client_port
+    end
+
+    @info "Room full" server room
+
+    return server, room
+end
+
 function start()
     target_frame_rate = 60
     total_frames = target_frame_rate * 2
@@ -110,7 +138,7 @@ if ARGS[1] == "--server"
     @assert length(ARGS) == 1
     IS_SERVER = true
 
-    @info "Running as server at host $(SERVER_HOST) port $(SERVER_PORT)"
+    @info "Running as server" SERVER_HOST SERVER_PORT
 elseif ARGS[1] == "--client"
     @assert length(ARGS) == 2
     IS_SERVER = false
@@ -118,12 +146,13 @@ elseif ARGS[1] == "--client"
     THIS_CLIENT_ID = parse(Int, ARGS[2])
     @assert THIS_CLIENT_ID in 1:ROOM_SIZE
 
-    CLIENT_HOST = CLIENT_HOSTS[THIS_CLIENT_ID]
-    CLIENT_PORT = CLIENT_PORTS[THIS_CLIENT_ID]
-
-    @info "Running as client at host $(CLIENT_HOST) port $(CLIENT_PORT)"
+    @info "Running as client" SERVER_HOST SERVER_PORT
 else
     error("Invalid command line argument $(ARGS[1])")
+end
+
+if IS_SERVER
+    server, room = start_server_and_fill_room(SERVER_HOST, SERVER_PORT, ROOM_SIZE)
 end
 
 # start()
