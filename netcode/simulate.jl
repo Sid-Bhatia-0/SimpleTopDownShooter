@@ -102,6 +102,18 @@ function start_server_and_fill_room(server_host, server_port, room_size)
     return server, room
 end
 
+function start_client(server_host, server_port)
+    socket = Sockets.connect(server_host, server_port)
+
+    sockname = Sockets.getsockname(socket)
+    client_host = sockname[1]
+    client_port = Int(sockname[2])
+
+    @info "Client connected to server" client_host client_port
+
+    return socket
+end
+
 function start()
     target_frame_rate = 60
     total_frames = target_frame_rate * 2
@@ -134,17 +146,14 @@ function start()
     return nothing
 end
 
+@assert length(ARGS) == 1
+
 if ARGS[1] == "--server"
-    @assert length(ARGS) == 1
     IS_SERVER = true
 
     @info "Running as server" SERVER_HOST SERVER_PORT
 elseif ARGS[1] == "--client"
-    @assert length(ARGS) == 2
     IS_SERVER = false
-
-    THIS_CLIENT_ID = parse(Int, ARGS[2])
-    @assert THIS_CLIENT_ID in 1:ROOM_SIZE
 
     @info "Running as client" SERVER_HOST SERVER_PORT
 else
@@ -153,6 +162,8 @@ end
 
 if IS_SERVER
     server, room = start_server_and_fill_room(SERVER_HOST, SERVER_PORT, ROOM_SIZE)
+else
+    socket = start_client(SERVER_HOST, SERVER_PORT)
 end
 
 # start()
