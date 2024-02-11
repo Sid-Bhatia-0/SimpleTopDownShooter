@@ -2,11 +2,6 @@ import DataFrames as DF
 import Sockets
 import Statistics
 
-@enum Actor begin
-    GAME_SERVER = 1
-    CLIENT
-end
-
 const ROOM_SIZE = 3
 
 const GAME_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10000)
@@ -149,21 +144,17 @@ end
 @assert length(ARGS) == 1
 
 if ARGS[1] == "--game_server"
-    actor = GAME_SERVER
-
     @info "Running as game_server" GAME_SERVER_ADDR
-elseif ARGS[1] == "--client"
-    actor = CLIENT
 
+    start_game_server(GAME_SERVER_ADDR, ROOM_SIZE)
+
+elseif ARGS[1] == "--client"
     @info "Running as client" GAME_SERVER_ADDR
+
+    start_client(GAME_SERVER_ADDR)
+
 else
     error("Invalid command line argument $(ARGS[1])")
-end
-
-if actor == GAME_SERVER
-    start_game_server(GAME_SERVER_ADDR, ROOM_SIZE)
-else
-    start_client(GAME_SERVER_ADDR)
 end
 
 # start()
