@@ -2,6 +2,11 @@ import DataFrames as DF
 import Sockets
 import Statistics
 
+@enum Actor begin
+    SERVER = 1
+    CLIENT
+end
+
 const ROOM_SIZE = 3
 
 const SERVER_HOST = Sockets.localhost
@@ -149,18 +154,18 @@ end
 @assert length(ARGS) == 1
 
 if ARGS[1] == "--server"
-    IS_SERVER = true
+    actor = SERVER
 
     @info "Running as server" SERVER_HOST SERVER_PORT
 elseif ARGS[1] == "--client"
-    IS_SERVER = false
+    actor = CLIENT
 
     @info "Running as client" SERVER_HOST SERVER_PORT
 else
     error("Invalid command line argument $(ARGS[1])")
 end
 
-if IS_SERVER
+if actor == SERVER
     start_server(SERVER_HOST, SERVER_PORT, ROOM_SIZE)
 else
     start_client(SERVER_HOST, SERVER_PORT)
