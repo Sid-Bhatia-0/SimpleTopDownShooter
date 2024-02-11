@@ -1,10 +1,13 @@
 import DataFrames as DF
+import HTTP
 import Sockets
 import Statistics
 
 const ROOM_SIZE = 3
 
 const GAME_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10000)
+
+const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const NULL_TCP_SOCKET = Sockets.TCPSocket()
 
@@ -99,7 +102,15 @@ function start_game_server(game_server_addr, room_size)
     return nothing
 end
 
-function start_client(game_server_addr)
+function start_client(auth_server_addr)
+    response = HTTP.request("GET", "http://" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port), [], "secret_password")
+
+    game_server_host_string, game_server_port_string = split(String(response.body), ":")
+
+    game_server_addr = Sockets.InetAddr(game_server_host_string, parse(Int, game_server_port_string))
+
+    @info "Client obtained game_server_addr" game_server_addr
+
     socket = Sockets.connect(game_server_addr)
 
     client_addr = Sockets.InetAddr(Sockets.getsockname(socket)...)
@@ -108,6 +119,20 @@ function start_client(game_server_addr)
 
     return nothing
 end
+
+function auth_handler(request)
+    try
+        if String(request.body) == "secret_password"
+            return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
+        else
+            return HTTP.Response(400, "ERROR: Incorrect password")
+        end
+    catch e
+        return HTTP.Response(400, "ERROR: $e")
+    end
+end
+
+start_auth_server(auth_server_addr) = HTTP.serve(auth_handler, auth_server_addr.host, auth_server_addr.port)
 
 function start()
     target_frame_rate = 60
@@ -144,14 +169,19 @@ end
 @assert length(ARGS) == 1
 
 if ARGS[1] == "--game_server"
-    @info "Running as game_server" GAME_SERVER_ADDR
+    @info "Running as game_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
 
     start_game_server(GAME_SERVER_ADDR, ROOM_SIZE)
 
-elseif ARGS[1] == "--client"
-    @info "Running as client" GAME_SERVER_ADDR
+elseif ARGS[1] == "--auth_server"
+    @info "Running as auth_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
 
-    start_client(GAME_SERVER_ADDR)
+    start_auth_server(AUTH_SERVER_ADDR)
+
+elseif ARGS[1] == "--client"
+    @info "Running as client" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+
+    start_client(AUTH_SERVER_ADDR)
 
 else
     error("Invalid command line argument $(ARGS[1])")
