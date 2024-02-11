@@ -3,14 +3,14 @@ import Sockets
 import Statistics
 
 @enum Actor begin
-    SERVER = 1
+    GAME_SERVER = 1
     CLIENT
 end
 
 const ROOM_SIZE = 3
 
-const SERVER_HOST = Sockets.localhost
-const SERVER_PORT = 10000
+const GAME_SERVER_HOST = Sockets.localhost
+const GAME_SERVER_PORT = 10000
 
 const NULL_TCP_SOCKET = Sockets.TCPSocket()
 
@@ -85,14 +85,14 @@ function create_df_debug_info(debug_info)
     )
 end
 
-function start_server(server_host, server_port, room_size)
+function start_game_server(game_server_host, game_server_port, room_size)
     room = fill(NULL_CLIENT_SLOT, 3)
 
-    server = Sockets.listen(server_host, server_port)
+    game_server = Sockets.listen(game_server_host, game_server_port)
     @info "Server started listening"
 
     for i in 1:ROOM_SIZE
-        client_slot = ClientSlot(true, Sockets.accept(server))
+        client_slot = ClientSlot(true, Sockets.accept(game_server))
         room[i] = client_slot
 
         peername = Sockets.getpeername(client_slot.socket)
@@ -102,19 +102,19 @@ function start_server(server_host, server_port, room_size)
         @info "Socket accepted" client_host client_port
     end
 
-    @info "Room full" server room
+    @info "Room full" game_server room
 
     return nothing
 end
 
-function start_client(server_host, server_port)
-    socket = Sockets.connect(server_host, server_port)
+function start_client(game_server_host, game_server_port)
+    socket = Sockets.connect(game_server_host, game_server_port)
 
     sockname = Sockets.getsockname(socket)
     client_host = sockname[1]
     client_port = Int(sockname[2])
 
-    @info "Client connected to server" client_host client_port
+    @info "Client connected to game_server" client_host client_port
 
     return nothing
 end
@@ -153,22 +153,22 @@ end
 
 @assert length(ARGS) == 1
 
-if ARGS[1] == "--server"
-    actor = SERVER
+if ARGS[1] == "--game_server"
+    actor = GAME_SERVER
 
-    @info "Running as server" SERVER_HOST SERVER_PORT
+    @info "Running as game_server" GAME_SERVER_HOST GAME_SERVER_PORT
 elseif ARGS[1] == "--client"
     actor = CLIENT
 
-    @info "Running as client" SERVER_HOST SERVER_PORT
+    @info "Running as client" GAME_SERVER_HOST GAME_SERVER_PORT
 else
     error("Invalid command line argument $(ARGS[1])")
 end
 
-if actor == SERVER
-    start_server(SERVER_HOST, SERVER_PORT, ROOM_SIZE)
+if actor == GAME_SERVER
+    start_game_server(GAME_SERVER_HOST, GAME_SERVER_PORT, ROOM_SIZE)
 else
-    start_client(SERVER_HOST, SERVER_PORT)
+    start_client(GAME_SERVER_HOST, GAME_SERVER_PORT)
 end
 
 # start()
