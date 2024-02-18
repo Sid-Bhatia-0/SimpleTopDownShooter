@@ -1,3 +1,4 @@
+import Base64
 import DataFrames as DF
 import HTTP
 import Sockets
@@ -10,6 +11,8 @@ const GAME_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10000)
 const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const NULL_TCP_SOCKET = Sockets.TCPSocket()
+
+const VALID_CREDENTIALS = Set(Base64.base64encode("user$(i):password$(i)") for i in 1:3)
 
 struct ClientSlot
     is_used::Bool
@@ -103,7 +106,7 @@ function start_game_server(game_server_addr, room_size)
 end
 
 function start_client(auth_server_addr)
-    response = HTTP.request("GET", "http://" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port), [], "secret_password")
+    response = HTTP.get("http://" * "user1" * ":" * "password1" * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
 
     game_server_host_string, game_server_port_string = split(String(response.body), ":")
 
@@ -122,10 +125,20 @@ end
 
 function auth_handler(request)
     try
-        if String(request.body) == "secret_password"
-            return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
+        i = findfirst(x -> x.first == "Authorization", request.headers)
+
+        if isnothing(i)
+            return HTTP.Response(400, "ERROR: Authorization not found in header")
         else
-            return HTTP.Response(400, "ERROR: Incorrect password")
+            if startswith(request.headers[i].second, "Basic ")
+                if split(request.headers[i].second)[2] in VALID_CREDENTIALS
+                    return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
+                else
+                    return HTTP.Response(400, "ERROR: Invalid credentials")
+                end
+            else
+                return HTTP.Response(400, "ERROR: Authorization type must be Basic authorization")
+            end
         end
     catch e
         return HTTP.Response(400, "ERROR: $e")
