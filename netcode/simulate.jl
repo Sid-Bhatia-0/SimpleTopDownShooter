@@ -14,6 +14,10 @@ const NULL_TCP_SOCKET = Sockets.TCPSocket()
 
 const VALID_CREDENTIALS = Set(Base64.base64encode("user$(i):password$(i)") for i in 1:3)
 
+const CLIENT_USERNAME = "user1"
+
+const CLIENT_PASSWORD = "password1"
+
 struct ClientSlot
     is_used::Bool
     socket::Sockets.TCPSocket
@@ -105,8 +109,8 @@ function start_game_server(game_server_addr, room_size)
     return nothing
 end
 
-function start_client(auth_server_addr)
-    response = HTTP.get("http://" * "user1" * ":" * "password1" * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
+function start_client(auth_server_addr, username, password)
+    response = HTTP.get("http://" * username * ":" * password * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
 
     game_server_host_string, game_server_port_string = split(String(response.body), ":")
 
@@ -194,7 +198,7 @@ elseif ARGS[1] == "--auth_server"
 elseif ARGS[1] == "--client"
     @info "Running as client" GAME_SERVER_ADDR AUTH_SERVER_ADDR
 
-    start_client(AUTH_SERVER_ADDR)
+    start_client(AUTH_SERVER_ADDR, CLIENT_USERNAME, CLIENT_PASSWORD)
 
 else
     error("Invalid command line argument $(ARGS[1])")
