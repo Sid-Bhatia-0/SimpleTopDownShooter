@@ -1,5 +1,29 @@
-import Statistics
+import Base64
 import DataFrames as DF
+import HTTP
+import Sockets
+import Statistics
+
+const ROOM_SIZE = 3
+
+const GAME_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10000)
+
+const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
+
+const NULL_TCP_SOCKET = Sockets.TCPSocket()
+
+const VALID_CREDENTIALS = Set(Base64.base64encode("user$(i):password$(i)") for i in 1:3)
+
+const CLIENT_USERNAME = "user1"
+
+const CLIENT_PASSWORD = "password1"
+
+struct ClientSlot
+    is_used::Bool
+    socket::Sockets.TCPSocket
+end
+
+const NULL_CLIENT_SLOT = ClientSlot(false, NULL_TCP_SOCKET)
 
 struct DebugInfo
     frame_end_time_buffer::Vector{Int}
@@ -65,6 +89,68 @@ function create_df_debug_info(debug_info)
     )
 end
 
+function start_game_server(game_server_addr, room_size)
+    room = fill(NULL_CLIENT_SLOT, 3)
+
+    game_server = Sockets.listen(game_server_addr)
+    @info "Server started listening"
+
+    for i in 1:ROOM_SIZE
+        client_slot = ClientSlot(true, Sockets.accept(game_server))
+        room[i] = client_slot
+
+        client_addr = Sockets.InetAddr(Sockets.getpeername(client_slot.socket)...)
+
+        @info "Socket accepted" client_addr
+    end
+
+    @info "Room full" game_server room
+
+    return nothing
+end
+
+function start_client(auth_server_addr, username, password)
+    response = HTTP.get("http://" * username * ":" * password * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
+
+    game_server_host_string, game_server_port_string = split(String(response.body), ":")
+
+    game_server_addr = Sockets.InetAddr(game_server_host_string, parse(Int, game_server_port_string))
+
+    @info "Client obtained game_server_addr" game_server_addr
+
+    socket = Sockets.connect(game_server_addr)
+
+    client_addr = Sockets.InetAddr(Sockets.getsockname(socket)...)
+
+    @info "Client connected to game_server" client_addr
+
+    return nothing
+end
+
+function auth_handler(request)
+    try
+        i = findfirst(x -> x.first == "Authorization", request.headers)
+
+        if isnothing(i)
+            return HTTP.Response(400, "ERROR: Authorization not found in header")
+        else
+            if startswith(request.headers[i].second, "Basic ")
+                if split(request.headers[i].second)[2] in VALID_CREDENTIALS
+                    return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
+                else
+                    return HTTP.Response(400, "ERROR: Invalid credentials")
+                end
+            else
+                return HTTP.Response(400, "ERROR: Authorization type must be Basic authorization")
+            end
+        end
+    catch e
+        return HTTP.Response(400, "ERROR: $e")
+    end
+end
+
+start_auth_server(auth_server_addr) = HTTP.serve(auth_handler, auth_server_addr.host, auth_server_addr.port)
+
 function start()
     target_frame_rate = 60
     total_frames = target_frame_rate * 2
@@ -97,4 +183,25 @@ function start()
     return nothing
 end
 
-start()
+@assert length(ARGS) == 1
+
+if ARGS[1] == "--game_server"
+    @info "Running as game_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+
+    start_game_server(GAME_SERVER_ADDR, ROOM_SIZE)
+
+elseif ARGS[1] == "--auth_server"
+    @info "Running as auth_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+
+    start_auth_server(AUTH_SERVER_ADDR)
+
+elseif ARGS[1] == "--client"
+    @info "Running as client" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+
+    start_client(AUTH_SERVER_ADDR, CLIENT_USERNAME, CLIENT_PASSWORD)
+
+else
+    error("Invalid command line argument $(ARGS[1])")
+end
+
+# start()
