@@ -13,7 +13,7 @@ const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const NULL_TCP_SOCKET = Sockets.TCPSocket()
 
-const VALID_CREDENTIALS = Set(("user$(i)", bytes2hex(SHA.sha3_256("password$(i)"))) for i in 1:3)
+const USER_DATA = DF.DataFrame(user = ["user$(i)" for i in 1:3], password = [bytes2hex(SHA.sha3_256("password$(i)")) for i in 1:3])
 
 const CLIENT_USERNAME = "user1"
 
@@ -140,12 +140,18 @@ function auth_handler(request)
             if startswith(request.headers[i].second, "Basic ")
                 base_64_encoded_credentials = split(request.headers[i].second)[2]
                 base_64_decoded_credentials = String(Base64.base64decode(base_64_encoded_credentials))
-                credentials = tuple(split(base_64_decoded_credentials, ':')...)
+                username, password = split(base_64_decoded_credentials, ':')
 
-                if credentials in VALID_CREDENTIALS
-                    return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
-                else
+                i = findfirst(==(username), USER_DATA[!, :user])
+
+                if isnothing(i)
                     return HTTP.Response(400, "ERROR: Invalid credentials")
+                else
+                    if password == USER_DATA[i, :password]
+                        return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
+                    else
+                        return HTTP.Response(400, "ERROR: Invalid credentials")
+                    end
                 end
             else
                 return HTTP.Response(400, "ERROR: Authorization type must be Basic authorization")
