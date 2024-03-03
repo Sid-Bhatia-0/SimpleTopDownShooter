@@ -13,6 +13,7 @@ const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const NULL_TCP_SOCKET = Sockets.TCPSocket()
 
+# TODO: salts must be randomly generated during user registration
 const USER_DATA = DF.DataFrame(user = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
 
 const CLIENT_USERNAME = "user1"
