@@ -1,6 +1,7 @@
 import Base64
 import DataFrames as DF
 import HTTP
+import SHA
 import Sockets
 import Statistics
 
@@ -12,7 +13,8 @@ const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const NULL_TCP_SOCKET = Sockets.TCPSocket()
 
-const VALID_CREDENTIALS = Set(Base64.base64encode("user$(i):password$(i)") for i in 1:3)
+# TODO: salts must be randomly generated during user registration
+const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
 
 const CLIENT_USERNAME = "user1"
 
@@ -110,7 +112,9 @@ function start_game_server(game_server_addr, room_size)
 end
 
 function start_client(auth_server_addr, username, password)
-    response = HTTP.get("http://" * username * ":" * password * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
+    hashed_password = bytes2hex(SHA.sha3_256(password))
+
+    response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
 
     game_server_host_string, game_server_port_string = split(String(response.body), ":")
 
@@ -135,10 +139,20 @@ function auth_handler(request)
             return HTTP.Response(400, "ERROR: Authorization not found in header")
         else
             if startswith(request.headers[i].second, "Basic ")
-                if split(request.headers[i].second)[2] in VALID_CREDENTIALS
-                    return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
-                else
+                base_64_encoded_credentials = split(request.headers[i].second)[2]
+                base_64_decoded_credentials = String(Base64.base64decode(base_64_encoded_credentials))
+                username, hashed_password = split(base_64_decoded_credentials, ':')
+
+                i = findfirst(==(username), USER_DATA[!, :username])
+
+                if isnothing(i)
                     return HTTP.Response(400, "ERROR: Invalid credentials")
+                else
+                    if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
+                        return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
+                    else
+                        return HTTP.Response(400, "ERROR: Invalid credentials")
+                    end
                 end
             else
                 return HTTP.Response(400, "ERROR: Authorization type must be Basic authorization")
