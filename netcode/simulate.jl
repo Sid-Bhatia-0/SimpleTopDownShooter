@@ -13,7 +13,7 @@ const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const NULL_TCP_SOCKET = Sockets.TCPSocket()
 
-const VALID_CREDENTIALS = Set(("user$(i)", bytes2hex(SHA.sha3_512("password$(i)"))) for i in 1:3)
+const VALID_CREDENTIALS = Set(("user$(i)", bytes2hex(SHA.sha3_256("password$(i)"))) for i in 1:3)
 
 const CLIENT_USERNAME = "user1"
 
@@ -111,7 +111,7 @@ function start_game_server(game_server_addr, room_size)
 end
 
 function start_client(auth_server_addr, username, password)
-    hashed_password = bytes2hex(SHA.sha3_512(password))
+    hashed_password = bytes2hex(SHA.sha3_256(password))
 
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
 
