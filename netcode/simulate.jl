@@ -197,25 +197,27 @@ function start()
     return nothing
 end
 
-@assert length(ARGS) == 1
+if length(ARGS) == 1
+    if ARGS[1] == "--game_server"
+        @info "Running as game_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
 
-if ARGS[1] == "--game_server"
-    @info "Running as game_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+        start_game_server(GAME_SERVER_ADDR, ROOM_SIZE)
 
-    start_game_server(GAME_SERVER_ADDR, ROOM_SIZE)
+    elseif ARGS[1] == "--auth_server"
+        @info "Running as auth_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
 
-elseif ARGS[1] == "--auth_server"
-    @info "Running as auth_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+        start_auth_server(AUTH_SERVER_ADDR)
 
-    start_auth_server(AUTH_SERVER_ADDR)
+    elseif ARGS[1] == "--client"
+        @info "Running as client" GAME_SERVER_ADDR AUTH_SERVER_ADDR
 
-elseif ARGS[1] == "--client"
-    @info "Running as client" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+        start_client(AUTH_SERVER_ADDR, CLIENT_USERNAME, CLIENT_PASSWORD)
 
-    start_client(AUTH_SERVER_ADDR, CLIENT_USERNAME, CLIENT_PASSWORD)
-
-else
-    error("Invalid command line argument $(ARGS[1])")
+    else
+        error("Invalid command line argument $(ARGS[1])")
+    end
+elseif length(ARGS) > 1
+    error("This script accepts at most one command line flag")
 end
 
 # start()
