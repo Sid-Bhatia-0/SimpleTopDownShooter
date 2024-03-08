@@ -3,11 +3,44 @@ import DataFrames as DF
 import HTTP
 import SHA
 import Sockets
+import Sodium
 import Statistics
+
+const NETCODE_VERSION_INFO = "NETCODE 1.02"
+
+const PROTOCOL_ID = parse(UInt64, bytes2hex(SHA.sha3_256(NETCODE_VERSION_INFO * "," * "Netcode.jl"))[1:16], base = 16)
+
+const CONNECTION_TIMEOUT_SECONDS = 5
+
+const CONNECT_TOKEN_EXPIRE_SECONDS = 10
+
+const SIZE_OF_NONCE = 24
+
+const SIZE_OF_CLIENT_TO_SERVER_KEY = 32
+
+const SIZE_OF_SERVER_TO_CLIENT_KEY = 32
+
+const SIZE_OF_SERVER_SIDE_SHARED_KEY = 32
+
+const SERVER_SIDE_SHARED_KEY = rand(UInt8, SIZE_OF_SERVER_SIDE_SHARED_KEY)
+
+const SIZE_OF_USER_DATA = 32
+
+const SIZE_OF_HMAC = 16
+
+const SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA = 1024
+
+const SIZE_OF_CONNECT_TOKEN = 2048
 
 const ROOM_SIZE = 3
 
 const GAME_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10000)
+
+const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDR]
+
+const MAX_GAME_SERVERS = 32
+
+@assert 1 <= length(GAME_SERVER_ADDRESSES) <= MAX_GAME_SERVERS
 
 const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
 
@@ -41,6 +74,148 @@ mutable struct GameState
     frame_number::Int
     target_frame_rate::Int
     target_ns_per_frame::Int
+end
+
+struct ConnectToken
+    netcode_version_info::String
+    protocol_id::UInt
+    create_timestamp::UInt
+    expire_timestamp::UInt
+    nonce::Vector{UInt8}
+    timeout_seconds::UInt32
+    client_id::UInt
+    server_addresses::Vector{Sockets.InetAddr}
+    client_to_server_key::Vector{UInt8}
+    server_to_client_key::Vector{UInt8}
+    user_data::Vector{UInt8}
+    server_side_shared_key::Vector{UInt8}
+    size_of_hmac::Int
+    size_of_encrypted_private_connect_token_data::Int
+    size_of_connect_token::Int
+end
+
+struct EncryptedPrivateConnectToken
+    connect_token::ConnectToken
+end
+
+function ConnectToken(client_id)
+    create_timestamp = time_ns()
+    expire_timestamp = create_timestamp + CONNECT_TOKEN_EXPIRE_SECONDS * 10 ^ 9
+
+    return ConnectToken(
+        NETCODE_VERSION_INFO,
+        PROTOCOL_ID,
+        create_timestamp,
+        expire_timestamp,
+        rand(UInt8, SIZE_OF_NONCE),
+        CONNECTION_TIMEOUT_SECONDS,
+        client_id,
+        GAME_SERVER_ADDRESSES,
+        rand(UInt8, SIZE_OF_CLIENT_TO_SERVER_KEY),
+        rand(UInt8, SIZE_OF_SERVER_TO_CLIENT_KEY),
+        rand(UInt8, SIZE_OF_USER_DATA),
+        SERVER_SIDE_SHARED_KEY,
+        SIZE_OF_HMAC,
+        SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA,
+        SIZE_OF_CONNECT_TOKEN,
+    )
+end
+
+function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateConnectToken)
+    connect_token = encrypted_private_connect_token.connect_token
+
+    io_message = IOBuffer(maxsize = connect_token.size_of_encrypted_private_connect_token_data - connect_token.size_of_hmac)
+
+    write(io_message, connect_token.client_id)
+
+    write(io_message, connect_token.timeout_seconds)
+
+    write(io_message, convert(UInt32, length(connect_token.server_addresses)))
+
+    for server_address in connect_token.server_addresses
+        if server_address.host isa Sockets.IPv4
+            write(io_message, UInt8(1))
+        else # server_address.host isa Sockets.IPv6
+            write(io_message, UInt8(2))
+        end
+
+        write(io_message, server_address.host.host)
+        write(io_message, server_address.port)
+    end
+
+    write(io_message, connect_token.client_to_server_key)
+
+    write(io_message, connect_token.server_to_client_key)
+
+    write(io_message, connect_token.user_data)
+
+    @info "number of bytes without padding: $(io_message.size)"
+
+    for i in 1 : connect_token.size_of_encrypted_private_connect_token_data - io_message.size
+        write(io_message, UInt8(0))
+    end
+
+    io_associated_data = IOBuffer(maxsize = length(connect_token.netcode_version_info) + 1 + sizeof(fieldtype(ConnectToken, :protocol_id)) + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
+
+    write(io_associated_data, connect_token.netcode_version_info)
+    write(io_associated_data, '\0')
+
+    write(io_associated_data, connect_token.protocol_id)
+
+    write(io_associated_data, connect_token.expire_timestamp)
+
+    ciphertext = zeros(UInt8, connect_token.size_of_encrypted_private_connect_token_data)
+    ciphertext_length_ref = Ref{UInt}()
+
+    Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, io_message.size, io_associated_data.data, io_associated_data.size, C_NULL, connect_token.nonce, connect_token.server_side_shared_key)
+
+    n = write(io, ciphertext)
+
+    return n
+end
+
+function Base.write(io::IO, connect_token::ConnectToken)
+    n = 0
+
+    n += write(io, connect_token.netcode_version_info)
+    n += write(io, '\0')
+
+    n += write(io, connect_token.protocol_id)
+
+    n += write(io, connect_token.create_timestamp)
+
+    n += write(io, connect_token.expire_timestamp)
+
+    n += write(io, connect_token.nonce)
+
+    n += write(io, EncryptedPrivateConnectToken(connect_token))
+
+    n += write(io, connect_token.timeout_seconds)
+
+    n += write(io, convert(UInt32, length(connect_token.server_addresses)))
+
+    for server_address in connect_token.server_addresses
+        if server_address.host isa Sockets.IPv4
+            n += write(io, UInt8(1))
+        else # server_address.host isa Sockets.IPv6
+            n += write(io, UInt8(2))
+        end
+
+        n += write(io, server_address.host.host)
+        n += write(io, server_address.port)
+    end
+
+    n += write(io, connect_token.client_to_server_key)
+
+    n += write(io, connect_token.server_to_client_key)
+
+    @info "number of bytes without padding: $(n)"
+
+    for i in 1 : connect_token.size_of_connect_token - n
+        n += write(io, UInt8(0))
+    end
+
+    return n
 end
 
 function get_time(reference_time)
