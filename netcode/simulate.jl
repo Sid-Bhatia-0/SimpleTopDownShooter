@@ -291,9 +291,56 @@ function start_client(auth_server_addr, username, password)
 
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
 
-    game_server_host_string, game_server_port_string = split(String(response.body), ":")
+    io_connect_token = IOBuffer(copy(response.body))
+    @show io_connect_token.size
 
-    game_server_addr = Sockets.InetAddr(game_server_host_string, parse(Int, game_server_port_string))
+    netcode_version_info = String(read(io_connect_token, 13))
+    @show netcode_version_info
+
+    protocol_id = read(io_connect_token, UInt)
+    @show protocol_id
+
+    create_timestamp = read(io_connect_token, UInt)
+    @show create_timestamp
+
+    expire_timestamp = read(io_connect_token, UInt)
+    @show expire_timestamp
+
+    nonce = read(io_connect_token, SIZE_OF_NONCE)
+    @show nonce
+
+    encrypted_private_connect_token_data = read(io_connect_token, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
+
+    timeout_seconds = read(io_connect_token, UInt32)
+    @show timeout_seconds
+
+    num_server_addresses = read(io_connect_token, UInt32)
+    @show num_server_addresses
+
+    server_addresses = Sockets.InetAddr[]
+
+    for i in 1:num_server_addresses
+        server_address_type = read(io_connect_token, UInt8)
+        if server_address_type == 1
+            host = Sockets.IPv4(read(io_connect_token, UInt32))
+        else # server_address_type == 2
+            host = Sockets.IPv6(read(io_connect_token, UInt128))
+        end
+
+        port = read(io_connect_token, UInt16)
+
+        server_address = Sockets.InetAddr(host, port)
+        push!(server_addresses, server_address)
+        @show i, server_address
+    end
+
+    client_to_server_key = read(io_connect_token, SIZE_OF_CLIENT_TO_SERVER_KEY)
+    @show client_to_server_key
+
+    server_to_client_key = read(io_connect_token, SIZE_OF_SERVER_TO_CLIENT_KEY)
+    @show server_to_client_key
+
+    game_server_addr = first(server_addresses)
 
     @info "Client obtained game_server_addr" game_server_addr
 
@@ -324,7 +371,23 @@ function auth_handler(request)
                     return HTTP.Response(400, "ERROR: Invalid credentials")
                 else
                     if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
-                        return HTTP.Response(200, string(GAME_SERVER_ADDR.host) * ":" * string(GAME_SERVER_ADDR.port))
+                        io = IOBuffer(maxsize = SIZE_OF_CONNECT_TOKEN)
+
+                        connect_token = ConnectToken(i)
+                        @show connect_token.netcode_version_info
+                        @show connect_token.protocol_id
+                        @show connect_token.create_timestamp
+                        @show connect_token.expire_timestamp
+                        @show connect_token.nonce
+                        @show connect_token.timeout_seconds
+                        @show length(connect_token.server_addresses)
+                        @show connect_token.server_addresses
+                        @show connect_token.client_to_server_key
+                        @show connect_token.server_to_client_key
+
+                        write(io, connect_token)
+
+                        return HTTP.Response(200, io.data)
                     else
                         return HTTP.Response(400, "ERROR: Invalid credentials")
                     end
