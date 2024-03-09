@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "1c961ae032af50a53359d48a3d1369f4cf435a30"
+project_hash = "f8fb4032b8baeb42816bf4a9511b6900c0c28364"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -291,6 +291,12 @@ version = "1.1.0"
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
+[[deps.Sodium]]
+deps = ["Base64", "libsodium_jll"]
+git-tree-sha1 = "907703e0d50846f300650d7225bdcab145b7bca9"
+uuid = "4f5b5e99-b0ad-42cd-b47a-334e172ec8bd"
+version = "1.1.2"
+
 [[deps.SortingAlgorithms]]
 deps = ["DataStructures"]
 git-tree-sha1 = "66e0a8e672a0bdfca2c3f5937efb8538b9ddc085"
@@ -373,6 +379,12 @@ version = "1.2.13+0"
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
 version = "5.8.0+0"
+
+[[deps.libsodium_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "848ab3d00fe39d6fbc2a8641048f8f272af1c51e"
+uuid = "a9144af2-ca23-56d9-984f-0d03f7b5ccf8"
+version = "1.0.20+0"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
