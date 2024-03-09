@@ -1,10 +1,13 @@
 import Base64
 import DataFrames as DF
 import HTTP
+import Random
 import SHA
 import Sockets
 import Sodium
 import Statistics
+
+const RNG = Random.MersenneTwister(0)
 
 const NETCODE_VERSION_INFO = "NETCODE 1.02"
 
@@ -22,7 +25,7 @@ const SIZE_OF_SERVER_TO_CLIENT_KEY = 32
 
 const SIZE_OF_SERVER_SIDE_SHARED_KEY = 32
 
-const SERVER_SIDE_SHARED_KEY = rand(UInt8, SIZE_OF_SERVER_SIDE_SHARED_KEY)
+const SERVER_SIDE_SHARED_KEY = rand(RNG, UInt8, SIZE_OF_SERVER_SIDE_SHARED_KEY)
 
 const SIZE_OF_USER_DATA = 32
 
@@ -167,7 +170,10 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
     ciphertext = zeros(UInt8, connect_token.size_of_encrypted_private_connect_token_data)
     ciphertext_length_ref = Ref{UInt}()
 
-    Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, io_message.size, io_associated_data.data, io_associated_data.size, C_NULL, connect_token.nonce, connect_token.server_side_shared_key)
+    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, io_message.size, io_associated_data.data, io_associated_data.size, C_NULL, connect_token.nonce, connect_token.server_side_shared_key)
+    if !iszero(encrypt_status)
+        error("Error in encryption")
+    end
 
     n = write(io, ciphertext)
 
@@ -292,30 +298,22 @@ function start_client(auth_server_addr, username, password)
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
 
     io_connect_token = IOBuffer(copy(response.body))
-    @show io_connect_token.size
 
-    netcode_version_info = String(read(io_connect_token, 13))
-    @show netcode_version_info
+    netcode_version_info = String(read(io_connect_token, length(NETCODE_VERSION_INFO) + 1))
 
     protocol_id = read(io_connect_token, UInt)
-    @show protocol_id
 
     create_timestamp = read(io_connect_token, UInt)
-    @show create_timestamp
 
     expire_timestamp = read(io_connect_token, UInt)
-    @show expire_timestamp
 
     nonce = read(io_connect_token, SIZE_OF_NONCE)
-    @show nonce
 
     encrypted_private_connect_token_data = read(io_connect_token, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
 
     timeout_seconds = read(io_connect_token, UInt32)
-    @show timeout_seconds
 
     num_server_addresses = read(io_connect_token, UInt32)
-    @show num_server_addresses
 
     server_addresses = Sockets.InetAddr[]
 
@@ -331,14 +329,69 @@ function start_client(auth_server_addr, username, password)
 
         server_address = Sockets.InetAddr(host, port)
         push!(server_addresses, server_address)
-        @show i, server_address
     end
 
     client_to_server_key = read(io_connect_token, SIZE_OF_CLIENT_TO_SERVER_KEY)
-    @show client_to_server_key
 
     server_to_client_key = read(io_connect_token, SIZE_OF_SERVER_TO_CLIENT_KEY)
-    @show server_to_client_key
+
+    @info "connect_token client readable data" io_connect_token.size netcode_version_info protocol_id create_timestamp expire_timestamp nonce timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key
+
+
+    let
+        # client doesn't have access to SERVER_SIDE_SHARED_KEY so it cannot decrypt the encrypted_private_connect_token_data. But I am still accessing the global variable SERVER_SIDE_SHARED_KEY and decrypting it for testing purposes
+
+        decrypted = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
+        decrypted_length_ref = Ref{UInt}()
+
+        ciphertext = encrypted_private_connect_token_data
+
+        io_associated_data = IOBuffer(maxsize = length(NETCODE_VERSION_INFO) + 1 + sizeof(fieldtype(ConnectToken, :protocol_id)) + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
+
+        write(io_associated_data, NETCODE_VERSION_INFO)
+        write(io_associated_data, '\0')
+
+        write(io_associated_data, protocol_id)
+
+        write(io_associated_data, expire_timestamp)
+
+        decrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(decrypted, decrypted_length_ref, C_NULL, ciphertext, length(ciphertext), io_associated_data.data, io_associated_data.size, nonce, SERVER_SIDE_SHARED_KEY)
+        if !iszero(decrypt_status)
+            error("Error in decryption. decrypt_status $(decrypt_status)")
+        end
+
+        io_decrypted = IOBuffer(decrypted)
+
+        client_id = read(io_decrypted, UInt)
+
+        timeout_seconds = read(io_decrypted, UInt32)
+
+        num_server_addresses = read(io_decrypted, UInt32)
+
+        server_addresses = Sockets.InetAddr[]
+
+        for i in 1:num_server_addresses
+            server_address_type = read(io_decrypted, UInt8)
+            if server_address_type == 1
+                host = Sockets.IPv4(read(io_decrypted, UInt32))
+            else # server_address_type == 2
+                host = Sockets.IPv6(read(io_decrypted, UInt128))
+            end
+
+            port = read(io_decrypted, UInt16)
+
+            server_address = Sockets.InetAddr(host, port)
+            push!(server_addresses, server_address)
+        end
+
+        client_to_server_key = read(io_decrypted, SIZE_OF_CLIENT_TO_SERVER_KEY)
+
+        server_to_client_key = read(io_decrypted, SIZE_OF_SERVER_TO_CLIENT_KEY)
+
+        user_data = read(io_decrypted, SIZE_OF_USER_DATA)
+
+        @info "connect_token client un-readable data (for testing)" decrypt_status client_id timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key user_data
+    end
 
     game_server_addr = first(server_addresses)
 
@@ -374,16 +427,7 @@ function auth_handler(request)
                         io = IOBuffer(maxsize = SIZE_OF_CONNECT_TOKEN)
 
                         connect_token = ConnectToken(i)
-                        @show connect_token.netcode_version_info
-                        @show connect_token.protocol_id
-                        @show connect_token.create_timestamp
-                        @show connect_token.expire_timestamp
-                        @show connect_token.nonce
-                        @show connect_token.timeout_seconds
-                        @show length(connect_token.server_addresses)
-                        @show connect_token.server_addresses
-                        @show connect_token.client_to_server_key
-                        @show connect_token.server_to_client_key
+                        @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.server_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data connect_token.server_side_shared_key connect_token.size_of_hmac connect_token.size_of_encrypted_private_connect_token_data connect_token.size_of_connect_token
 
                         write(io, connect_token)
 
