@@ -41,6 +41,10 @@ const ROOM_SIZE = 3
 
 const NetcodeInetAddr = Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
 
+const TYPE_OF_ADDRESS_TYPE = UInt8
+const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
+const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(1)
+
 const GAME_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
 
 const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDRESS]
@@ -141,9 +145,9 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
 
     for server_address in connect_token.server_addresses
         if server_address isa Sockets.InetAddr{Sockets.IPv4}
-            write(io_message, UInt8(1))
+            write(io_message, ADDRESS_TYPE_IPV4)
         else
-            write(io_message, UInt8(2))
+            write(io_message, ADDRESS_TYPE_IPV6)
         end
 
         write(io_message, server_address.host.host)
@@ -204,9 +208,9 @@ function Base.write(io::IO, connect_token::ConnectToken)
 
     for server_address in connect_token.server_addresses
         if server_address isa Sockets.InetAddr{Sockets.IPv4}
-            n += write(io, UInt8(1))
+            n += write(io, ADDRESS_TYPE_IPV4)
         else
-            n += write(io, UInt8(2))
+            n += write(io, ADDRESS_TYPE_IPV6)
         end
 
         n += write(io, server_address.host.host)
@@ -320,10 +324,10 @@ function start_client(auth_server_address, username, password)
     server_addresses = NetcodeInetAddr[]
 
     for i in 1:num_server_addresses
-        server_address_type = read(io_connect_token, UInt8)
-        if server_address_type == 1
+        server_address_type = read(io_connect_token, TYPE_OF_ADDRESS_TYPE)
+        if server_address_type == ADDRESS_TYPE_IPV4
             host = Sockets.IPv4(read(io_connect_token, UInt32))
-        else # server_address_type == 2
+        else # server_address_type == ADDRESS_TYPE_IPV6
             host = Sockets.IPv6(read(io_connect_token, UInt128))
         end
 
@@ -372,10 +376,10 @@ function start_client(auth_server_address, username, password)
         server_addresses = NetcodeInetAddr[]
 
         for i in 1:num_server_addresses
-            server_address_type = read(io_decrypted, UInt8)
-            if server_address_type == 1
+            server_address_type = read(io_decrypted, TYPE_OF_ADDRESS_TYPE)
+            if server_address_type == ADDRESS_TYPE_IPV4
                 host = Sockets.IPv4(read(io_decrypted, UInt32))
-            else # server_address_type == 2
+            else # server_address_type == ADDRESS_TYPE_IPV6
                 host = Sockets.IPv6(read(io_decrypted, UInt128))
             end
 
