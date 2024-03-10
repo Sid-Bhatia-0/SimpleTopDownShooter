@@ -61,9 +61,25 @@ const TYPE_OF_ADDRESS_TYPE = UInt8
 const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
 const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(1)
 
+const TYPE_OF_IPV4_HOST = fieldtype(Sockets.IPv4, :host)
+const SIZE_OF_IPV4_HOST = sizeof(TYPE_OF_IPV4_HOST)
+
+const TYPE_OF_IPV4_PORT = fieldtype(Sockets.InetAddr{Sockets.IPv4}, :port)
+const SIZE_OF_IPV4_PORT = sizeof(TYPE_OF_IPV4_PORT)
+
+const TYPE_OF_IPV6_HOST = fieldtype(Sockets.IPv6, :host)
+const SIZE_OF_IPV6_HOST = sizeof(TYPE_OF_IPV6_HOST)
+
+const TYPE_OF_IPV6_PORT = fieldtype(Sockets.InetAddr{Sockets.IPv6}, :port)
+const SIZE_OF_IPV6_PORT = sizeof(TYPE_OF_IPV6_PORT)
+
 const GAME_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
 
 const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDRESS]
+
+const TYPE_OF_NUM_SERVER_ADDRESSES = UInt32
+
+const SIZE_OF_NUM_SERVER_ADDRESSES = sizeof(TYPE_OF_NUM_SERVER_ADDRESSES)
 
 const MAX_GAME_SERVERS = 32
 
@@ -149,7 +165,7 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
 
     write(io_message, connect_token.timeout_seconds)
 
-    write(io_message, convert(UInt32, length(connect_token.server_addresses)))
+    write(io_message, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
 
     for server_address in connect_token.server_addresses
         if server_address isa Sockets.InetAddr{Sockets.IPv4}
@@ -212,7 +228,7 @@ function Base.write(io::IO, connect_token::ConnectToken)
 
     n += write(io, connect_token.timeout_seconds)
 
-    n += write(io, convert(UInt32, length(connect_token.server_addresses)))
+    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
 
     for server_address in connect_token.server_addresses
         if server_address isa Sockets.InetAddr{Sockets.IPv4}
@@ -327,19 +343,19 @@ function start_client(auth_server_address, username, password)
 
     timeout_seconds = read(io_connect_token, TYPE_OF_TIMEOUT_SECONDS)
 
-    num_server_addresses = read(io_connect_token, UInt32)
+    num_server_addresses = read(io_connect_token, TYPE_OF_NUM_SERVER_ADDRESSES)
 
     server_addresses = NetcodeInetAddr[]
 
     for i in 1:num_server_addresses
         server_address_type = read(io_connect_token, TYPE_OF_ADDRESS_TYPE)
         if server_address_type == ADDRESS_TYPE_IPV4
-            host = Sockets.IPv4(read(io_connect_token, UInt32))
+            host = Sockets.IPv4(read(io_connect_token, TYPE_OF_IPV4_HOST))
+            port = read(io_connect_token, TYPE_OF_IPV4_PORT)
         else # server_address_type == ADDRESS_TYPE_IPV6
-            host = Sockets.IPv6(read(io_connect_token, UInt128))
+            host = Sockets.IPv6(read(io_connect_token, TYPE_OF_IPV6_HOST))
+            port = read(io_connect_token, TYPE_OF_IPV6_PORT)
         end
-
-        port = read(io_connect_token, UInt16)
 
         server_address = Sockets.InetAddr(host, port)
         push!(server_addresses, server_address)
@@ -350,7 +366,6 @@ function start_client(auth_server_address, username, password)
     server_to_client_key = read(io_connect_token, SIZE_OF_SERVER_TO_CLIENT_KEY)
 
     @info "connect_token client readable data" io_connect_token.size netcode_version_info protocol_id create_timestamp expire_timestamp nonce timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key
-
 
     let
         # client doesn't have access to SERVER_SIDE_SHARED_KEY so it cannot decrypt the encrypted_private_connect_token_data. But I am still accessing the global variable SERVER_SIDE_SHARED_KEY and decrypting it for testing purposes
@@ -379,19 +394,19 @@ function start_client(auth_server_address, username, password)
 
         timeout_seconds = read(io_decrypted, TYPE_OF_TIMEOUT_SECONDS)
 
-        num_server_addresses = read(io_decrypted, UInt32)
+        num_server_addresses = read(io_decrypted, TYPE_OF_NUM_SERVER_ADDRESSES)
 
         server_addresses = NetcodeInetAddr[]
 
         for i in 1:num_server_addresses
             server_address_type = read(io_decrypted, TYPE_OF_ADDRESS_TYPE)
             if server_address_type == ADDRESS_TYPE_IPV4
-                host = Sockets.IPv4(read(io_decrypted, UInt32))
+                host = Sockets.IPv4(read(io_decrypted, TYPE_OF_IPV4_HOST))
+                port = read(io_decrypted, TYPE_OF_IPV4_PORT)
             else # server_address_type == ADDRESS_TYPE_IPV6
-                host = Sockets.IPv6(read(io_decrypted, UInt128))
+                host = Sockets.IPv6(read(io_decrypted, TYPE_OF_IPV6_HOST))
+                port = read(io_decrypted, TYPE_OF_IPV6_PORT)
             end
-
-            port = read(io_decrypted, UInt16)
 
             server_address = Sockets.InetAddr(host, port)
             push!(server_addresses, server_address)
