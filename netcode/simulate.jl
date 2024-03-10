@@ -9,7 +9,9 @@ import Statistics
 
 const RNG = Random.MersenneTwister(0)
 
-const NETCODE_VERSION_INFO = "NETCODE 1.02"
+const NETCODE_VERSION_INFO = "NETCODE 1.02\0"
+
+const SIZE_OF_NETCODE_VERSION_INFO = length(NETCODE_VERSION_INFO)
 
 const PROTOCOL_ID = parse(UInt64, bytes2hex(SHA.sha3_256(NETCODE_VERSION_INFO * "," * "Netcode.jl"))[1:16], base = 16)
 
@@ -158,10 +160,9 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
         write(io_message, UInt8(0))
     end
 
-    io_associated_data = IOBuffer(maxsize = length(connect_token.netcode_version_info) + 1 + sizeof(fieldtype(ConnectToken, :protocol_id)) + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
+    io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + sizeof(fieldtype(ConnectToken, :protocol_id)) + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
 
     write(io_associated_data, connect_token.netcode_version_info)
-    write(io_associated_data, '\0')
 
     write(io_associated_data, connect_token.protocol_id)
 
@@ -184,7 +185,6 @@ function Base.write(io::IO, connect_token::ConnectToken)
     n = 0
 
     n += write(io, connect_token.netcode_version_info)
-    n += write(io, '\0')
 
     n += write(io, connect_token.protocol_id)
 
@@ -299,7 +299,7 @@ function start_client(auth_server_addr, username, password)
 
     io_connect_token = IOBuffer(copy(response.body))
 
-    netcode_version_info = String(read(io_connect_token, length(NETCODE_VERSION_INFO) + 1))
+    netcode_version_info = String(read(io_connect_token, SIZE_OF_NETCODE_VERSION_INFO))
 
     protocol_id = read(io_connect_token, UInt)
 
@@ -346,10 +346,9 @@ function start_client(auth_server_addr, username, password)
 
         ciphertext = encrypted_private_connect_token_data
 
-        io_associated_data = IOBuffer(maxsize = length(NETCODE_VERSION_INFO) + 1 + sizeof(fieldtype(ConnectToken, :protocol_id)) + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
+        io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + sizeof(fieldtype(ConnectToken, :protocol_id)) + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
 
         write(io_associated_data, NETCODE_VERSION_INFO)
-        write(io_associated_data, '\0')
 
         write(io_associated_data, protocol_id)
 
