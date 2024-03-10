@@ -47,7 +47,7 @@ const MAX_GAME_SERVERS = 32
 
 @assert 1 <= length(GAME_SERVER_ADDRESSES) <= MAX_GAME_SERVERS
 
-const AUTH_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10001)
+const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const NULL_TCP_SOCKET = Sockets.TCPSocket()
 
@@ -292,10 +292,10 @@ function start_game_server(game_server_address, room_size)
     return nothing
 end
 
-function start_client(auth_server_addr, username, password)
+function start_client(auth_server_address, username, password)
     hashed_password = bytes2hex(SHA.sha3_256(password))
 
-    response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_addr.host) * ":" * string(auth_server_addr.port))
+    response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port))
 
     io_connect_token = IOBuffer(copy(response.body))
 
@@ -444,7 +444,7 @@ function auth_handler(request)
     end
 end
 
-start_auth_server(auth_server_addr) = HTTP.serve(auth_handler, auth_server_addr.host, auth_server_addr.port)
+start_auth_server(auth_server_address) = HTTP.serve(auth_handler, auth_server_address.host, auth_server_address.port)
 
 function start()
     target_frame_rate = 60
@@ -480,19 +480,19 @@ end
 
 if length(ARGS) == 1
     if ARGS[1] == "--game_server"
-        @info "Running as game_server" GAME_SERVER_ADDRESS AUTH_SERVER_ADDR
+        @info "Running as game_server" GAME_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
         start_game_server(GAME_SERVER_ADDRESS, ROOM_SIZE)
 
     elseif ARGS[1] == "--auth_server"
-        @info "Running as auth_server" GAME_SERVER_ADDRESS AUTH_SERVER_ADDR
+        @info "Running as auth_server" GAME_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        start_auth_server(AUTH_SERVER_ADDR)
+        start_auth_server(AUTH_SERVER_ADDRESS)
 
     elseif ARGS[1] == "--client"
-        @info "Running as client" GAME_SERVER_ADDRESS AUTH_SERVER_ADDR
+        @info "Running as client" GAME_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        start_client(AUTH_SERVER_ADDR, CLIENT_USERNAME, CLIENT_PASSWORD)
+        start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD)
 
     else
         error("Invalid command line argument $(ARGS[1])")
