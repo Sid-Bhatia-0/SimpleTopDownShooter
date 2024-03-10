@@ -9,11 +9,11 @@ import Statistics
 
 const RNG = Random.MersenneTwister(0)
 
-const NETCODE_VERSION_INFO = "NETCODE 1.02\0"
+const NETCODE_VERSION_INFO = Vector{UInt8}("NETCODE 1.02\0")
 
 const SIZE_OF_NETCODE_VERSION_INFO = length(NETCODE_VERSION_INFO)
 
-const PROTOCOL_ID = parse(UInt64, bytes2hex(SHA.sha3_256(NETCODE_VERSION_INFO * "," * "Netcode.jl"))[1:16], base = 16)
+const PROTOCOL_ID = parse(UInt64, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
 
 const CONNECTION_TIMEOUT_SECONDS = 5
 
@@ -82,7 +82,7 @@ mutable struct GameState
 end
 
 struct ConnectToken
-    netcode_version_info::String
+    netcode_version_info::Vector{UInt8}
     protocol_id::UInt
     create_timestamp::UInt
     expire_timestamp::UInt
@@ -299,7 +299,7 @@ function start_client(auth_server_addr, username, password)
 
     io_connect_token = IOBuffer(copy(response.body))
 
-    netcode_version_info = String(read(io_connect_token, SIZE_OF_NETCODE_VERSION_INFO))
+    netcode_version_info = read(io_connect_token, SIZE_OF_NETCODE_VERSION_INFO)
 
     protocol_id = read(io_connect_token, UInt)
 
