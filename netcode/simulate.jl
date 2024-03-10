@@ -282,9 +282,9 @@ function start_game_server(game_server_address, room_size)
         client_slot = ClientSlot(true, Sockets.accept(game_server))
         room[i] = client_slot
 
-        client_addr = Sockets.InetAddr(Sockets.getpeername(client_slot.socket)...)
+        client_address = Sockets.InetAddr(Sockets.getpeername(client_slot.socket)...)
 
-        @info "Socket accepted" client_addr
+        @info "Socket accepted" client_address
     end
 
     @info "Room full" game_server room
@@ -398,9 +398,9 @@ function start_client(auth_server_addr, username, password)
 
     socket = Sockets.connect(game_server_address)
 
-    client_addr = Sockets.InetAddr(Sockets.getsockname(socket)...)
+    client_address = Sockets.InetAddr(Sockets.getsockname(socket)...)
 
-    @info "Client connected to game_server" client_addr
+    @info "Client connected to game_server" client_address
 
     return nothing
 end
