@@ -13,7 +13,11 @@ const NETCODE_VERSION_INFO = Vector{UInt8}("NETCODE 1.02\0")
 
 const SIZE_OF_NETCODE_VERSION_INFO = length(NETCODE_VERSION_INFO)
 
-const PROTOCOL_ID = parse(UInt64, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
+const TYPE_OF_PROTOCOL_ID = UInt64
+
+const SIZE_OF_PROTOCOL_ID = sizeof(TYPE_OF_PROTOCOL_ID)
+
+const PROTOCOL_ID = parse(TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
 
 const CONNECTION_TIMEOUT_SECONDS = 5
 
@@ -89,7 +93,7 @@ end
 
 struct ConnectToken
     netcode_version_info::Vector{UInt8}
-    protocol_id::UInt
+    protocol_id::TYPE_OF_PROTOCOL_ID
     create_timestamp::UInt
     expire_timestamp::UInt
     nonce::Vector{UInt8}
@@ -166,7 +170,7 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
         write(io_message, UInt8(0))
     end
 
-    io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + sizeof(fieldtype(ConnectToken, :protocol_id)) + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
+    io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
 
     write(io_associated_data, connect_token.netcode_version_info)
 
@@ -307,7 +311,7 @@ function start_client(auth_server_address, username, password)
 
     netcode_version_info = read(io_connect_token, SIZE_OF_NETCODE_VERSION_INFO)
 
-    protocol_id = read(io_connect_token, UInt)
+    protocol_id = read(io_connect_token, TYPE_OF_PROTOCOL_ID)
 
     create_timestamp = read(io_connect_token, UInt)
 
@@ -352,7 +356,7 @@ function start_client(auth_server_address, username, password)
 
         ciphertext = encrypted_private_connect_token_data
 
-        io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + sizeof(fieldtype(ConnectToken, :protocol_id)) + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
+        io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + sizeof(fieldtype(ConnectToken, :expire_timestamp)))
 
         write(io_associated_data, NETCODE_VERSION_INFO)
 
