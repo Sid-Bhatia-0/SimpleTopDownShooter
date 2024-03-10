@@ -39,6 +39,8 @@ const SIZE_OF_CONNECT_TOKEN = 2048
 
 const ROOM_SIZE = 3
 
+const NetcodeInetAddr = Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
+
 const GAME_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
 
 const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDRESS]
@@ -89,7 +91,7 @@ struct ConnectToken
     nonce::Vector{UInt8}
     timeout_seconds::UInt32
     client_id::UInt
-    server_addresses::Vector{Sockets.InetAddr}
+    server_addresses::Vector{NetcodeInetAddr}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
@@ -138,9 +140,9 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
     write(io_message, convert(UInt32, length(connect_token.server_addresses)))
 
     for server_address in connect_token.server_addresses
-        if server_address.host isa Sockets.IPv4
+        if server_address isa Sockets.InetAddr{Sockets.IPv4}
             write(io_message, UInt8(1))
-        else # server_address.host isa Sockets.IPv6
+        else
             write(io_message, UInt8(2))
         end
 
@@ -201,9 +203,9 @@ function Base.write(io::IO, connect_token::ConnectToken)
     n += write(io, convert(UInt32, length(connect_token.server_addresses)))
 
     for server_address in connect_token.server_addresses
-        if server_address.host isa Sockets.IPv4
+        if server_address isa Sockets.InetAddr{Sockets.IPv4}
             n += write(io, UInt8(1))
-        else # server_address.host isa Sockets.IPv6
+        else
             n += write(io, UInt8(2))
         end
 
@@ -315,7 +317,7 @@ function start_client(auth_server_address, username, password)
 
     num_server_addresses = read(io_connect_token, UInt32)
 
-    server_addresses = Sockets.InetAddr[]
+    server_addresses = NetcodeInetAddr[]
 
     for i in 1:num_server_addresses
         server_address_type = read(io_connect_token, UInt8)
@@ -367,7 +369,7 @@ function start_client(auth_server_address, username, password)
 
         num_server_addresses = read(io_decrypted, UInt32)
 
-        server_addresses = Sockets.InetAddr[]
+        server_addresses = NetcodeInetAddr[]
 
         for i in 1:num_server_addresses
             server_address_type = read(io_decrypted, UInt8)
