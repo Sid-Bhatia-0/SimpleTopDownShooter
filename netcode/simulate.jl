@@ -115,9 +115,6 @@ struct ConnectToken
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
-    size_of_hmac::Int
-    size_of_encrypted_private_connect_token_data::Int
-    size_of_connect_token::Int
 end
 
 struct EncryptedPrivateConnectToken
@@ -140,16 +137,13 @@ function ConnectToken(client_id)
         rand(UInt8, SIZE_OF_CLIENT_TO_SERVER_KEY),
         rand(UInt8, SIZE_OF_SERVER_TO_CLIENT_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
-        SIZE_OF_HMAC,
-        SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA,
-        SIZE_OF_CONNECT_TOKEN,
     )
 end
 
 function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateConnectToken)
     connect_token = encrypted_private_connect_token.connect_token
 
-    io_message = IOBuffer(maxsize = connect_token.size_of_encrypted_private_connect_token_data - connect_token.size_of_hmac)
+    io_message = IOBuffer(maxsize = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
 
     write(io_message, connect_token.client_id)
 
@@ -176,7 +170,7 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
 
     @info "number of bytes without padding: $(io_message.size)"
 
-    for i in 1 : connect_token.size_of_encrypted_private_connect_token_data - io_message.size
+    for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - io_message.size
         write(io_message, UInt8(0))
     end
 
@@ -188,7 +182,7 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
 
     write(io_associated_data, connect_token.expire_timestamp)
 
-    ciphertext = zeros(UInt8, connect_token.size_of_encrypted_private_connect_token_data)
+    ciphertext = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     ciphertext_length_ref = Ref{UInt}()
 
     encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, io_message.size, io_associated_data.data, io_associated_data.size, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
@@ -237,7 +231,7 @@ function Base.write(io::IO, connect_token::ConnectToken)
 
     @info "number of bytes without padding: $(n)"
 
-    for i in 1 : connect_token.size_of_connect_token - n
+    for i in 1 : SIZE_OF_CONNECT_TOKEN - n
         n += write(io, UInt8(0))
     end
 
@@ -446,7 +440,7 @@ function auth_handler(request)
                         io = IOBuffer(maxsize = SIZE_OF_CONNECT_TOKEN)
 
                         connect_token = ConnectToken(i)
-                        @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.server_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY connect_token.size_of_hmac connect_token.size_of_encrypted_private_connect_token_data connect_token.size_of_connect_token
+                        @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.server_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN
 
                         write(io, connect_token)
 
