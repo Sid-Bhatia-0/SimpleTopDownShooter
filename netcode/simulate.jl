@@ -39,9 +39,9 @@ const SIZE_OF_CONNECT_TOKEN = 2048
 
 const ROOM_SIZE = 3
 
-const GAME_SERVER_ADDR = Sockets.InetAddr(Sockets.localhost, 10000)
+const GAME_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
 
-const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDR]
+const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDRESS]
 
 const MAX_GAME_SERVERS = 32
 
@@ -272,10 +272,10 @@ function create_df_debug_info(debug_info)
     )
 end
 
-function start_game_server(game_server_addr, room_size)
+function start_game_server(game_server_address, room_size)
     room = fill(NULL_CLIENT_SLOT, 3)
 
-    game_server = Sockets.listen(game_server_addr)
+    game_server = Sockets.listen(game_server_address)
     @info "Server started listening"
 
     for i in 1:ROOM_SIZE
@@ -392,11 +392,11 @@ function start_client(auth_server_addr, username, password)
         @info "connect_token client un-readable data (for testing)" decrypt_status client_id timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key user_data
     end
 
-    game_server_addr = first(server_addresses)
+    game_server_address = first(server_addresses)
 
-    @info "Client obtained game_server_addr" game_server_addr
+    @info "Client obtained game_server_address" game_server_address
 
-    socket = Sockets.connect(game_server_addr)
+    socket = Sockets.connect(game_server_address)
 
     client_addr = Sockets.InetAddr(Sockets.getsockname(socket)...)
 
@@ -480,17 +480,17 @@ end
 
 if length(ARGS) == 1
     if ARGS[1] == "--game_server"
-        @info "Running as game_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+        @info "Running as game_server" GAME_SERVER_ADDRESS AUTH_SERVER_ADDR
 
-        start_game_server(GAME_SERVER_ADDR, ROOM_SIZE)
+        start_game_server(GAME_SERVER_ADDRESS, ROOM_SIZE)
 
     elseif ARGS[1] == "--auth_server"
-        @info "Running as auth_server" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+        @info "Running as auth_server" GAME_SERVER_ADDRESS AUTH_SERVER_ADDR
 
         start_auth_server(AUTH_SERVER_ADDR)
 
     elseif ARGS[1] == "--client"
-        @info "Running as client" GAME_SERVER_ADDR AUTH_SERVER_ADDR
+        @info "Running as client" GAME_SERVER_ADDRESS AUTH_SERVER_ADDR
 
         start_client(AUTH_SERVER_ADDR, CLIENT_USERNAME, CLIENT_PASSWORD)
 
