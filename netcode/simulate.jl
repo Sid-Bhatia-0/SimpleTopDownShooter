@@ -23,7 +23,11 @@ const TYPE_OF_TIMESTAMP = UInt64
 
 const SIZE_OF_TIMESTAMP = sizeof(TYPE_OF_TIMESTAMP)
 
-const CONNECTION_TIMEOUT_SECONDS = 5
+const TYPE_OF_TIMEOUT_SECONDS = UInt32
+
+const SIZE_OF_TIMEOUT_SECONDS = sizeof(TYPE_OF_TIMEOUT_SECONDS)
+
+const TIMEOUT_SECONDS = TYPE_OF_TIMEOUT_SECONDS(5)
 
 const CONNECT_TOKEN_EXPIRE_SECONDS = 10
 
@@ -101,7 +105,7 @@ struct ConnectToken
     create_timestamp::TYPE_OF_TIMESTAMP
     expire_timestamp::TYPE_OF_TIMESTAMP
     nonce::Vector{UInt8}
-    timeout_seconds::UInt32
+    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     client_id::UInt
     server_addresses::Vector{NetcodeInetAddr}
     client_to_server_key::Vector{UInt8}
@@ -127,7 +131,7 @@ function ConnectToken(client_id)
         create_timestamp,
         expire_timestamp,
         rand(UInt8, SIZE_OF_NONCE),
-        CONNECTION_TIMEOUT_SECONDS,
+        TIMEOUT_SECONDS,
         client_id,
         GAME_SERVER_ADDRESSES,
         rand(UInt8, SIZE_OF_CLIENT_TO_SERVER_KEY),
@@ -325,7 +329,7 @@ function start_client(auth_server_address, username, password)
 
     encrypted_private_connect_token_data = read(io_connect_token, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
 
-    timeout_seconds = read(io_connect_token, UInt32)
+    timeout_seconds = read(io_connect_token, TYPE_OF_TIMEOUT_SECONDS)
 
     num_server_addresses = read(io_connect_token, UInt32)
 
@@ -377,7 +381,7 @@ function start_client(auth_server_address, username, password)
 
         client_id = read(io_decrypted, UInt)
 
-        timeout_seconds = read(io_decrypted, UInt32)
+        timeout_seconds = read(io_decrypted, TYPE_OF_TIMEOUT_SECONDS)
 
         num_server_addresses = read(io_decrypted, UInt32)
 
