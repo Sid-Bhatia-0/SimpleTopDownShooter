@@ -187,7 +187,7 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
 
     encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, io_message.size, io_associated_data.data, io_associated_data.size, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
     if !iszero(encrypt_status)
-        error("Error in encryption")
+        error("Error in encryption. encrypt_status $(encrypt_status)")
     end
 
     n = write(io, ciphertext)
