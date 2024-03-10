@@ -31,6 +31,10 @@ const TIMEOUT_SECONDS = TYPE_OF_TIMEOUT_SECONDS(5)
 
 const CONNECT_TOKEN_EXPIRE_SECONDS = 10
 
+const TYPE_OF_CLIENT_ID = UInt64
+
+const SIZE_OF_CLIENT_ID = sizeof(TYPE_OF_CLIENT_ID)
+
 const SIZE_OF_NONCE = 24
 
 const SIZE_OF_CLIENT_TO_SERVER_KEY = 32
@@ -106,7 +110,7 @@ struct ConnectToken
     expire_timestamp::TYPE_OF_TIMESTAMP
     nonce::Vector{UInt8}
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
-    client_id::UInt
+    client_id::TYPE_OF_CLIENT_ID
     server_addresses::Vector{NetcodeInetAddr}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
@@ -379,7 +383,7 @@ function start_client(auth_server_address, username, password)
 
         io_decrypted = IOBuffer(decrypted)
 
-        client_id = read(io_decrypted, UInt)
+        client_id = read(io_decrypted, TYPE_OF_CLIENT_ID)
 
         timeout_seconds = read(io_decrypted, TYPE_OF_TIMEOUT_SECONDS)
 
