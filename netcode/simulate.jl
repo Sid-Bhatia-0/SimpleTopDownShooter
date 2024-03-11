@@ -133,6 +133,15 @@ struct ConnectToken
     user_data::Vector{UInt8}
 end
 
+struct PrivateConnectToken
+    client_id::TYPE_OF_CLIENT_ID
+    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
+    server_addresses::Vector{NetcodeInetAddr}
+    client_to_server_key::Vector{UInt8}
+    server_to_client_key::Vector{UInt8}
+    user_data::Vector{UInt8}
+end
+
 struct EncryptedPrivateConnectToken
     connect_token::ConnectToken
 end
@@ -154,6 +163,33 @@ function ConnectToken(client_id)
         rand(UInt8, SIZE_OF_SERVER_TO_CLIENT_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
     )
+end
+
+function Base.write(io::IO, private_connect_token::PrivateConnectToken)
+    n += write(io, private_connect_token.client_id)
+
+    n += write(io, private_connect_token.timeout_seconds)
+
+    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(private_connect_token.server_addresses)))
+
+    for server_address in private_connect_token.server_addresses
+        if server_address isa Sockets.InetAddr{Sockets.IPv4}
+            n += write(io, ADDRESS_TYPE_IPV4)
+        else
+            n += write(io, ADDRESS_TYPE_IPV6)
+        end
+
+        n += write(io, server_address.host.host)
+        n += write(io, server_address.port)
+    end
+
+    n += write(io, private_connect_token.client_to_server_key)
+
+    n += write(io, private_connect_token.server_to_client_key)
+
+    n += write(io, private_connect_token.user_data)
+
+    return n
 end
 
 function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateConnectToken)
