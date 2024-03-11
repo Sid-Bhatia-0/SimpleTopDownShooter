@@ -142,6 +142,12 @@ struct PrivateConnectToken
     user_data::Vector{UInt8}
 end
 
+struct PrivateConnectTokenAssociatedData
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    expire_timestamp::TYPE_OF_TIMESTAMP
+end
+
 struct EncryptedPrivateConnectToken
     connect_token::ConnectToken
 end
@@ -188,6 +194,16 @@ function Base.write(io::IO, private_connect_token::PrivateConnectToken)
     n += write(io, private_connect_token.server_to_client_key)
 
     n += write(io, private_connect_token.user_data)
+
+    return n
+end
+
+function Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData)
+    n += write(io, private_connect_token_associated_data.netcode_version_info)
+
+    n += write(io, private_connect_token_associated_data.protocol_id)
+
+    n += write(io, private_connect_token_associated_data.expire_timestamp)
 
     return n
 end
