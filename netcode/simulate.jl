@@ -216,6 +216,8 @@ end
 function Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData)
     connect_token = private_connect_token_associated_data.connect_token
 
+    n = 0
+
     n += write(io, connect_token.netcode_version_info)
 
     n += write(io, connect_token.protocol_id)
