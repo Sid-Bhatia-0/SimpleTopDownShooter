@@ -58,6 +58,7 @@ const ROOM_SIZE = 3
 const NetcodeInetAddr = Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
 
 const TYPE_OF_ADDRESS_TYPE = UInt8
+const SIZE_OF_ADDRESS_TYPE = sizeof(TYPE_OF_ADDRESS_TYPE)
 const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
 const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(1)
 
