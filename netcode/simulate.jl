@@ -171,6 +171,8 @@ end
 function Base.write(io::IO, private_connect_token::PrivateConnectToken)
     connect_token = private_connect_token.connect_token
 
+    n = 0
+
     n += write(io, connect_token.client_id)
 
     n += write(io, connect_token.timeout_seconds)
