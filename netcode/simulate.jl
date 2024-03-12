@@ -246,9 +246,7 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
     ciphertext_length_ref = Ref{UInt}()
 
     encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, message_length, io_associated_data.data, associated_data_length, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
-    if !iszero(encrypt_status)
-        error("Error in encryption. encrypt_status $(encrypt_status)")
-    end
+    @assert encrypt_status == 0
     @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
     n = write(io, ciphertext)
@@ -429,9 +427,7 @@ function start_client(auth_server_address, username, password)
         write(io_associated_data, expire_timestamp)
 
         decrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(decrypted, decrypted_length_ref, C_NULL, ciphertext, length(ciphertext), io_associated_data.data, io_associated_data.size, nonce, SERVER_SIDE_SHARED_KEY)
-        if !iszero(decrypt_status)
-            error("Error in decryption. decrypt_status $(decrypt_status)")
-        end
+        @assert decrypt_status == 0
 
         io_decrypted = IOBuffer(decrypted)
 
