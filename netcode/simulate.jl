@@ -60,7 +60,7 @@ const NetcodeInetAddr = Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{S
 const TYPE_OF_ADDRESS_TYPE = UInt8
 const SIZE_OF_ADDRESS_TYPE = sizeof(TYPE_OF_ADDRESS_TYPE)
 const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
-const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(1)
+const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(2)
 
 const TYPE_OF_IPV4_HOST = fieldtype(Sockets.IPv4, :host)
 const SIZE_OF_IPV4_HOST = sizeof(TYPE_OF_IPV4_HOST)
