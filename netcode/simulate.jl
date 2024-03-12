@@ -137,6 +137,10 @@ struct PrivateConnectToken
     connect_token::ConnectToken
 end
 
+struct PaddedPrivateConnectToken
+    connect_token::ConnectToken
+end
+
 struct PrivateConnectTokenAssociatedData
     connect_token::ConnectToken
 end
@@ -189,6 +193,22 @@ function Base.write(io::IO, private_connect_token::PrivateConnectToken)
     n += write(io, connect_token.server_to_client_key)
 
     n += write(io, connect_token.user_data)
+
+    return n
+end
+
+function Base.write(io::IO, padded_private_connect_token::PaddedPrivateConnectToken)
+    connect_token = padded_private_connect_token.connect_token
+
+    n = 0
+
+    n += write(io, PrivateConnectToken(connect_token))
+
+    @info "PrivateConnectToken written: $(n) bytes"
+
+    for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC - n
+        n += write(io, UInt8(0))
+    end
 
     return n
 end
