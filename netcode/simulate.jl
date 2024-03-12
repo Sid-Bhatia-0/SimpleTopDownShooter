@@ -235,7 +235,7 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
 
     @info "number of bytes without padding: $(io_message.size)"
 
-    for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - io_message.size
+    for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC - io_message.size
         write(io_message, UInt8(0))
     end
 
