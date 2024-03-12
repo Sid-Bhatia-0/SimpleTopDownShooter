@@ -134,18 +134,11 @@ struct ConnectToken
 end
 
 struct PrivateConnectToken
-    client_id::TYPE_OF_CLIENT_ID
-    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
-    server_addresses::Vector{NetcodeInetAddr}
-    client_to_server_key::Vector{UInt8}
-    server_to_client_key::Vector{UInt8}
-    user_data::Vector{UInt8}
+    connect_token::ConnectToken
 end
 
 struct PrivateConnectTokenAssociatedData
-    netcode_version_info::Vector{UInt8}
-    protocol_id::TYPE_OF_PROTOCOL_ID
-    expire_timestamp::TYPE_OF_TIMESTAMP
+    connect_token::ConnectToken
 end
 
 struct EncryptedPrivateConnectToken
@@ -172,13 +165,15 @@ function ConnectToken(client_id)
 end
 
 function Base.write(io::IO, private_connect_token::PrivateConnectToken)
-    n += write(io, private_connect_token.client_id)
+    connect_token = private_connect_token.connect_token
 
-    n += write(io, private_connect_token.timeout_seconds)
+    n += write(io, connect_token.client_id)
 
-    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(private_connect_token.server_addresses)))
+    n += write(io, connect_token.timeout_seconds)
 
-    for server_address in private_connect_token.server_addresses
+    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
+
+    for server_address in connect_token.server_addresses
         if server_address isa Sockets.InetAddr{Sockets.IPv4}
             n += write(io, ADDRESS_TYPE_IPV4)
         else
@@ -189,21 +184,23 @@ function Base.write(io::IO, private_connect_token::PrivateConnectToken)
         n += write(io, server_address.port)
     end
 
-    n += write(io, private_connect_token.client_to_server_key)
+    n += write(io, connect_token.client_to_server_key)
 
-    n += write(io, private_connect_token.server_to_client_key)
+    n += write(io, connect_token.server_to_client_key)
 
-    n += write(io, private_connect_token.user_data)
+    n += write(io, connect_token.user_data)
 
     return n
 end
 
 function Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData)
-    n += write(io, private_connect_token_associated_data.netcode_version_info)
+    connect_token = private_connect_token_associated_data.connect_token
 
-    n += write(io, private_connect_token_associated_data.protocol_id)
+    n += write(io, connect_token.netcode_version_info)
 
-    n += write(io, private_connect_token_associated_data.expire_timestamp)
+    n += write(io, connect_token.protocol_id)
+
+    n += write(io, connect_token.expire_timestamp)
 
     return n
 end
