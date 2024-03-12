@@ -233,51 +233,23 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
     connect_token = encrypted_private_connect_token.connect_token
 
     io_message = IOBuffer(maxsize = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
-
-    write(io_message, connect_token.client_id)
-
-    write(io_message, connect_token.timeout_seconds)
-
-    write(io_message, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
-
-    for server_address in connect_token.server_addresses
-        if server_address isa Sockets.InetAddr{Sockets.IPv4}
-            write(io_message, ADDRESS_TYPE_IPV4)
-        else
-            write(io_message, ADDRESS_TYPE_IPV6)
-        end
-
-        write(io_message, server_address.host.host)
-        write(io_message, server_address.port)
-    end
-
-    write(io_message, connect_token.client_to_server_key)
-
-    write(io_message, connect_token.server_to_client_key)
-
-    write(io_message, connect_token.user_data)
-
-    @info "number of bytes without padding: $(io_message.size)"
-
-    for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC - io_message.size
-        write(io_message, UInt8(0))
-    end
+    message_length = write(io_message, PaddedPrivateConnectToken(connect_token))
+    @assert message_length == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
+    @info "PaddedPrivateConnectToken written: $(message_length) bytes"
 
     io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + SIZE_OF_TIMESTAMP)
-
-    write(io_associated_data, connect_token.netcode_version_info)
-
-    write(io_associated_data, connect_token.protocol_id)
-
-    write(io_associated_data, connect_token.expire_timestamp)
+    associated_data_length = write(io_associated_data, PrivateConnectTokenAssociatedData(connect_token))
+    @assert associated_data_length == SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + SIZE_OF_TIMESTAMP
+    @info "PrivateConnectTokenAssociatedData written: $(associated_data_length) bytes"
 
     ciphertext = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     ciphertext_length_ref = Ref{UInt}()
 
-    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, io_message.size, io_associated_data.data, io_associated_data.size, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
+    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, message_length, io_associated_data.data, associated_data_length, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
     if !iszero(encrypt_status)
         error("Error in encryption. encrypt_status $(encrypt_status)")
     end
+    @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
     n = write(io, ciphertext)
 
