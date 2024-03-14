@@ -58,8 +58,9 @@ const ROOM_SIZE = 3
 const NetcodeInetAddr = Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
 
 const TYPE_OF_ADDRESS_TYPE = UInt8
+const SIZE_OF_ADDRESS_TYPE = sizeof(TYPE_OF_ADDRESS_TYPE)
 const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
-const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(1)
+const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(2)
 
 const TYPE_OF_IPV4_HOST = fieldtype(Sockets.IPv4, :host)
 const SIZE_OF_IPV4_HOST = sizeof(TYPE_OF_IPV4_HOST)
@@ -133,6 +134,18 @@ struct ConnectToken
     user_data::Vector{UInt8}
 end
 
+struct PrivateConnectToken
+    connect_token::ConnectToken
+end
+
+struct PaddedPrivateConnectToken
+    connect_token::ConnectToken
+end
+
+struct PrivateConnectTokenAssociatedData
+    connect_token::ConnectToken
+end
+
 struct EncryptedPrivateConnectToken
     connect_token::ConnectToken
 end
@@ -156,55 +169,86 @@ function ConnectToken(client_id)
     )
 end
 
+function Base.write(io::IO, private_connect_token::PrivateConnectToken)
+    connect_token = private_connect_token.connect_token
+
+    n = 0
+
+    n += write(io, connect_token.client_id)
+
+    n += write(io, connect_token.timeout_seconds)
+
+    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
+
+    for server_address in connect_token.server_addresses
+        if server_address isa Sockets.InetAddr{Sockets.IPv4}
+            n += write(io, ADDRESS_TYPE_IPV4)
+        else
+            n += write(io, ADDRESS_TYPE_IPV6)
+        end
+
+        n += write(io, server_address.host.host)
+        n += write(io, server_address.port)
+    end
+
+    n += write(io, connect_token.client_to_server_key)
+
+    n += write(io, connect_token.server_to_client_key)
+
+    n += write(io, connect_token.user_data)
+
+    return n
+end
+
+function Base.write(io::IO, padded_private_connect_token::PaddedPrivateConnectToken)
+    connect_token = padded_private_connect_token.connect_token
+
+    n = 0
+
+    n += write(io, PrivateConnectToken(connect_token))
+
+    @info "PrivateConnectToken written: $(n) bytes"
+
+    for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC - n
+        n += write(io, UInt8(0))
+    end
+
+    return n
+end
+
+function Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData)
+    connect_token = private_connect_token_associated_data.connect_token
+
+    n = 0
+
+    n += write(io, connect_token.netcode_version_info)
+
+    n += write(io, connect_token.protocol_id)
+
+    n += write(io, connect_token.expire_timestamp)
+
+    return n
+end
+
 function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateConnectToken)
     connect_token = encrypted_private_connect_token.connect_token
 
     io_message = IOBuffer(maxsize = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
-
-    write(io_message, connect_token.client_id)
-
-    write(io_message, connect_token.timeout_seconds)
-
-    write(io_message, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
-
-    for server_address in connect_token.server_addresses
-        if server_address isa Sockets.InetAddr{Sockets.IPv4}
-            write(io_message, ADDRESS_TYPE_IPV4)
-        else
-            write(io_message, ADDRESS_TYPE_IPV6)
-        end
-
-        write(io_message, server_address.host.host)
-        write(io_message, server_address.port)
-    end
-
-    write(io_message, connect_token.client_to_server_key)
-
-    write(io_message, connect_token.server_to_client_key)
-
-    write(io_message, connect_token.user_data)
-
-    @info "number of bytes without padding: $(io_message.size)"
-
-    for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - io_message.size
-        write(io_message, UInt8(0))
-    end
+    message_length = write(io_message, PaddedPrivateConnectToken(connect_token))
+    @assert message_length == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
+    @info "PaddedPrivateConnectToken written: $(message_length) bytes"
 
     io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + SIZE_OF_TIMESTAMP)
-
-    write(io_associated_data, connect_token.netcode_version_info)
-
-    write(io_associated_data, connect_token.protocol_id)
-
-    write(io_associated_data, connect_token.expire_timestamp)
+    associated_data_length = write(io_associated_data, PrivateConnectTokenAssociatedData(connect_token))
+    @assert associated_data_length == SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + SIZE_OF_TIMESTAMP
+    @info "PrivateConnectTokenAssociatedData written: $(associated_data_length) bytes"
 
     ciphertext = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     ciphertext_length_ref = Ref{UInt}()
 
-    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, io_message.size, io_associated_data.data, io_associated_data.size, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
-    if !iszero(encrypt_status)
-        error("Error in encryption. encrypt_status $(encrypt_status)")
-    end
+    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, message_length, io_associated_data.data, associated_data_length, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
+    @assert encrypt_status == 0
+    @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
     n = write(io, ciphertext)
 
@@ -384,9 +428,7 @@ function start_client(auth_server_address, username, password)
         write(io_associated_data, expire_timestamp)
 
         decrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(decrypted, decrypted_length_ref, C_NULL, ciphertext, length(ciphertext), io_associated_data.data, io_associated_data.size, nonce, SERVER_SIDE_SHARED_KEY)
-        if !iszero(decrypt_status)
-            error("Error in decryption. decrypt_status $(decrypt_status)")
-        end
+        @assert decrypt_status == 0
 
         io_decrypted = IOBuffer(decrypted)
 
