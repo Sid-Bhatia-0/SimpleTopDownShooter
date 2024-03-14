@@ -477,41 +477,37 @@ function start_client(auth_server_address, username, password)
 end
 
 function auth_handler(request)
-    try
-        i = findfirst(x -> x.first == "Authorization", request.headers)
+    i = findfirst(x -> x.first == "Authorization", request.headers)
 
-        if isnothing(i)
-            return HTTP.Response(400, "ERROR: Authorization not found in header")
-        else
-            if startswith(request.headers[i].second, "Basic ")
-                base_64_encoded_credentials = split(request.headers[i].second)[2]
-                base_64_decoded_credentials = String(Base64.base64decode(base_64_encoded_credentials))
-                username, hashed_password = split(base_64_decoded_credentials, ':')
+    if isnothing(i)
+        return HTTP.Response(400, "ERROR: Authorization not found in header")
+    else
+        if startswith(request.headers[i].second, "Basic ")
+            base_64_encoded_credentials = split(request.headers[i].second)[2]
+            base_64_decoded_credentials = String(Base64.base64decode(base_64_encoded_credentials))
+            username, hashed_password = split(base_64_decoded_credentials, ':')
 
-                i = findfirst(==(username), USER_DATA[!, :username])
+            i = findfirst(==(username), USER_DATA[!, :username])
 
-                if isnothing(i)
-                    return HTTP.Response(400, "ERROR: Invalid credentials")
-                else
-                    if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
-                        io = IOBuffer(maxsize = SIZE_OF_CONNECT_TOKEN)
-
-                        connect_token = ConnectToken(i)
-                        @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.server_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN
-
-                        write(io, connect_token)
-
-                        return HTTP.Response(200, io.data)
-                    else
-                        return HTTP.Response(400, "ERROR: Invalid credentials")
-                    end
-                end
+            if isnothing(i)
+                return HTTP.Response(400, "ERROR: Invalid credentials")
             else
-                return HTTP.Response(400, "ERROR: Authorization type must be Basic authorization")
+                if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
+                    io = IOBuffer(maxsize = SIZE_OF_CONNECT_TOKEN)
+
+                    connect_token = ConnectToken(i)
+                    @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.server_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN
+
+                    write(io, connect_token)
+
+                    return HTTP.Response(200, io.data)
+                else
+                    return HTTP.Response(400, "ERROR: Invalid credentials")
+                end
             end
+        else
+            return HTTP.Response(400, "ERROR: Authorization type must be Basic authorization")
         end
-    catch e
-        return HTTP.Response(400, "ERROR: $e")
     end
 end
 
