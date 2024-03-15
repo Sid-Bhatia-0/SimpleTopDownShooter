@@ -55,8 +55,6 @@ const SIZE_OF_CONNECT_TOKEN = 2048
 
 const ROOM_SIZE = 3
 
-const NetcodeInetAddr = Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
-
 const TYPE_OF_ADDRESS_TYPE = UInt8
 const SIZE_OF_ADDRESS_TYPE = sizeof(TYPE_OF_ADDRESS_TYPE)
 const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
@@ -120,6 +118,10 @@ mutable struct GameState
     target_ns_per_frame::Int
 end
 
+struct NetcodeInetAddr
+    address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
+end
+
 struct ConnectToken
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
@@ -162,11 +164,41 @@ function ConnectToken(client_id)
         rand(UInt8, SIZE_OF_NONCE),
         TIMEOUT_SECONDS,
         client_id,
-        GAME_SERVER_ADDRESSES,
+        NetcodeInetAddr.(GAME_SERVER_ADDRESSES),
         rand(UInt8, SIZE_OF_CLIENT_TO_SERVER_KEY),
         rand(UInt8, SIZE_OF_SERVER_TO_CLIENT_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
     )
+end
+
+get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
+get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
+get_address_type(netcode_inetaddr::NetcodeInetAddr) = get_address_type(netcode_inetaddr.address)
+
+function Base.write(io::IO, netcode_inetaddr::NetcodeInetAddr)
+    n = 0
+
+    n += write(io, get_address_type(netcode_inetaddr))
+    n += write(io, netcode_inetaddr.address.host.host)
+    n += write(io, netcode_inetaddr.address.port)
+
+    return n
+end
+
+function try_read(io::IO, ::Type{NetcodeInetAddr})
+    address_type = read(io, TYPE_OF_ADDRESS_TYPE)
+
+    if address_type == ADDRESS_TYPE_IPV4
+        host = Sockets.IPv4(read(io, TYPE_OF_IPV4_HOST))
+        port = read(io, TYPE_OF_IPV4_PORT)
+    elseif address_type == ADDRESS_TYPE_IPV6
+        host = Sockets.IPv6(read(io, TYPE_OF_IPV6_HOST))
+        port = read(io, TYPE_OF_IPV6_PORT)
+    else
+        return nothing
+    end
+
+    return NetcodeInetAddr(Sockets.InetAddr(host, port))
 end
 
 function Base.write(io::IO, private_connect_token::PrivateConnectToken)
@@ -181,14 +213,7 @@ function Base.write(io::IO, private_connect_token::PrivateConnectToken)
     n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
 
     for server_address in connect_token.server_addresses
-        if server_address isa Sockets.InetAddr{Sockets.IPv4}
-            n += write(io, ADDRESS_TYPE_IPV4)
-        else
-            n += write(io, ADDRESS_TYPE_IPV6)
-        end
-
-        n += write(io, server_address.host.host)
-        n += write(io, server_address.port)
+        n += write(io, server_address)
     end
 
     n += write(io, connect_token.client_to_server_key)
@@ -275,14 +300,7 @@ function Base.write(io::IO, connect_token::ConnectToken)
     n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
 
     for server_address in connect_token.server_addresses
-        if server_address isa Sockets.InetAddr{Sockets.IPv4}
-            n += write(io, ADDRESS_TYPE_IPV4)
-        else
-            n += write(io, ADDRESS_TYPE_IPV6)
-        end
-
-        n += write(io, server_address.host.host)
-        n += write(io, server_address.port)
+        n += write(io, server_address)
     end
 
     n += write(io, connect_token.client_to_server_key)
@@ -392,17 +410,12 @@ function start_client(auth_server_address, username, password)
     server_addresses = NetcodeInetAddr[]
 
     for i in 1:num_server_addresses
-        server_address_type = read(io_connect_token, TYPE_OF_ADDRESS_TYPE)
-        if server_address_type == ADDRESS_TYPE_IPV4
-            host = Sockets.IPv4(read(io_connect_token, TYPE_OF_IPV4_HOST))
-            port = read(io_connect_token, TYPE_OF_IPV4_PORT)
-        else # server_address_type == ADDRESS_TYPE_IPV6
-            host = Sockets.IPv6(read(io_connect_token, TYPE_OF_IPV6_HOST))
-            port = read(io_connect_token, TYPE_OF_IPV6_PORT)
+        server_address = try_read(io_connect_token, NetcodeInetAddr)
+        if !isnothing(server_address)
+            push!(server_addresses, server_address)
+        else
+            error("Unable to read a value of type NetcodeInetAddr")
         end
-
-        server_address = Sockets.InetAddr(host, port)
-        push!(server_addresses, server_address)
     end
 
     client_to_server_key = read(io_connect_token, SIZE_OF_CLIENT_TO_SERVER_KEY)
@@ -441,17 +454,12 @@ function start_client(auth_server_address, username, password)
         server_addresses = NetcodeInetAddr[]
 
         for i in 1:num_server_addresses
-            server_address_type = read(io_decrypted, TYPE_OF_ADDRESS_TYPE)
-            if server_address_type == ADDRESS_TYPE_IPV4
-                host = Sockets.IPv4(read(io_decrypted, TYPE_OF_IPV4_HOST))
-                port = read(io_decrypted, TYPE_OF_IPV4_PORT)
-            else # server_address_type == ADDRESS_TYPE_IPV6
-                host = Sockets.IPv6(read(io_decrypted, TYPE_OF_IPV6_HOST))
-                port = read(io_decrypted, TYPE_OF_IPV6_PORT)
+            server_address = try_read(io_decrypted, NetcodeInetAddr)
+            if !isnothing(server_address)
+                push!(server_addresses, server_address)
+            else
+                error("Unable to read a value of type NetcodeInetAddr")
             end
-
-            server_address = Sockets.InetAddr(host, port)
-            push!(server_addresses, server_address)
         end
 
         client_to_server_key = read(io_decrypted, SIZE_OF_CLIENT_TO_SERVER_KEY)
@@ -463,7 +471,7 @@ function start_client(auth_server_address, username, password)
         @info "connect_token client un-readable data (for testing)" decrypt_status client_id timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key user_data
     end
 
-    game_server_address = first(server_addresses)
+    game_server_address = first(server_addresses).address
 
     @info "Client obtained game_server_address" game_server_address
 
