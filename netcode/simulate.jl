@@ -264,6 +264,34 @@ function get_serialized_size(connect_token::ConnectToken)
     return n
 end
 
+function get_serialized_size(connect_token_client::ConnectTokenClient)
+    n = 0
+
+    n += get_serialized_size(connect_token_client.netcode_version_info)
+
+    n += get_serialized_size(connect_token_client.protocol_id)
+
+    n += get_serialized_size(connect_token_client.create_timestamp)
+
+    n += get_serialized_size(connect_token_client.expire_timestamp)
+
+    n += get_serialized_size(connect_token_client.nonce)
+
+    n += get_serialized_size(connect_token_client.encrypted_private_connect_token_data)
+
+    n += get_serialized_size(connect_token_client.timeout_seconds)
+
+    n += get_serialized_size(zero(TYPE_OF_NUM_SERVER_ADDRESSES))
+
+    n += sum(get_serialized_size, connect_token_client.netcode_addresses)
+
+    n += get_serialized_size(connect_token_client.client_to_server_key)
+
+    n += get_serialized_size(connect_token_client.server_to_client_key)
+
+    return n
+end
+
 get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
 get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
 get_address_type(netcode_inetaddr::NetcodeInetAddr) = get_address_type(netcode_inetaddr.address)
@@ -473,7 +501,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
 
     server_to_client_key = read(io, SIZE_OF_SERVER_TO_CLIENT_KEY)
 
-    return ConnectTokenClient(
+    connect_token_client = ConnectTokenClient(
         netcode_version_info,
         protocol_id,
         create_timestamp,
@@ -485,6 +513,15 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
         client_to_server_key,
         server_to_client_key,
     )
+
+    size_of_connect_token_client = get_serialized_size(connect_token_client)
+
+    padding = read(io)
+    if length(padding) != (SIZE_OF_PADDED_CONNECT_TOKEN - size_of_connect_token_client) || any(!=(0), padding)
+        return nothing
+    end
+
+    return connect_token_client
 end
 
 function get_time(reference_time)
