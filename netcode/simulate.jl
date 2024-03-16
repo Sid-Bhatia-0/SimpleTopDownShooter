@@ -490,7 +490,7 @@ function start_client(auth_server_address, username, password)
         return nothing
     end
 
-    io_connect_token = IOBuffer(copy(response.body))
+    io_connect_token = IOBuffer(data)
 
     netcode_version_info = read(io_connect_token, SIZE_OF_NETCODE_VERSION_INFO)
 
