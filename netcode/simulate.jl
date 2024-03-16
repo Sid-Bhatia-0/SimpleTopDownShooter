@@ -55,8 +55,6 @@ const SIZE_OF_CONNECT_TOKEN = 2048
 
 const ROOM_SIZE = 3
 
-const NetcodeInetAddr = Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
-
 const TYPE_OF_ADDRESS_TYPE = UInt8
 const SIZE_OF_ADDRESS_TYPE = sizeof(TYPE_OF_ADDRESS_TYPE)
 const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
@@ -120,6 +118,10 @@ mutable struct GameState
     target_ns_per_frame::Int
 end
 
+struct NetcodeInetAddr
+    address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
+end
+
 struct ConnectToken
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
@@ -128,7 +130,7 @@ struct ConnectToken
     nonce::Vector{UInt8}
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     client_id::TYPE_OF_CLIENT_ID
-    server_addresses::Vector{NetcodeInetAddr}
+    netcode_addresses::Vector{NetcodeInetAddr}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
@@ -162,11 +164,41 @@ function ConnectToken(client_id)
         rand(UInt8, SIZE_OF_NONCE),
         TIMEOUT_SECONDS,
         client_id,
-        GAME_SERVER_ADDRESSES,
+        NetcodeInetAddr.(GAME_SERVER_ADDRESSES),
         rand(UInt8, SIZE_OF_CLIENT_TO_SERVER_KEY),
         rand(UInt8, SIZE_OF_SERVER_TO_CLIENT_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
     )
+end
+
+get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
+get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
+get_address_type(netcode_inetaddr::NetcodeInetAddr) = get_address_type(netcode_inetaddr.address)
+
+function Base.write(io::IO, netcode_inetaddr::NetcodeInetAddr)
+    n = 0
+
+    n += write(io, get_address_type(netcode_inetaddr))
+    n += write(io, netcode_inetaddr.address.host.host)
+    n += write(io, netcode_inetaddr.address.port)
+
+    return n
+end
+
+function try_read(io::IO, ::Type{NetcodeInetAddr})
+    address_type = read(io, TYPE_OF_ADDRESS_TYPE)
+
+    if address_type == ADDRESS_TYPE_IPV4
+        host = Sockets.IPv4(read(io, TYPE_OF_IPV4_HOST))
+        port = read(io, TYPE_OF_IPV4_PORT)
+    elseif address_type == ADDRESS_TYPE_IPV6
+        host = Sockets.IPv6(read(io, TYPE_OF_IPV6_HOST))
+        port = read(io, TYPE_OF_IPV6_PORT)
+    else
+        return nothing
+    end
+
+    return NetcodeInetAddr(Sockets.InetAddr(host, port))
 end
 
 function Base.write(io::IO, private_connect_token::PrivateConnectToken)
@@ -178,17 +210,10 @@ function Base.write(io::IO, private_connect_token::PrivateConnectToken)
 
     n += write(io, connect_token.timeout_seconds)
 
-    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
+    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.netcode_addresses)))
 
-    for server_address in connect_token.server_addresses
-        if server_address isa Sockets.InetAddr{Sockets.IPv4}
-            n += write(io, ADDRESS_TYPE_IPV4)
-        else
-            n += write(io, ADDRESS_TYPE_IPV6)
-        end
-
-        n += write(io, server_address.host.host)
-        n += write(io, server_address.port)
+    for netcode_address in connect_token.netcode_addresses
+        n += write(io, netcode_address)
     end
 
     n += write(io, connect_token.client_to_server_key)
@@ -272,17 +297,10 @@ function Base.write(io::IO, connect_token::ConnectToken)
 
     n += write(io, connect_token.timeout_seconds)
 
-    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
+    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.netcode_addresses)))
 
-    for server_address in connect_token.server_addresses
-        if server_address isa Sockets.InetAddr{Sockets.IPv4}
-            n += write(io, ADDRESS_TYPE_IPV4)
-        else
-            n += write(io, ADDRESS_TYPE_IPV6)
-        end
-
-        n += write(io, server_address.host.host)
-        n += write(io, server_address.port)
+    for netcode_address in connect_token.netcode_addresses
+        n += write(io, netcode_address)
     end
 
     n += write(io, connect_token.client_to_server_key)
@@ -389,27 +407,22 @@ function start_client(auth_server_address, username, password)
 
     num_server_addresses = read(io_connect_token, TYPE_OF_NUM_SERVER_ADDRESSES)
 
-    server_addresses = NetcodeInetAddr[]
+    netcode_addresses = NetcodeInetAddr[]
 
     for i in 1:num_server_addresses
-        server_address_type = read(io_connect_token, TYPE_OF_ADDRESS_TYPE)
-        if server_address_type == ADDRESS_TYPE_IPV4
-            host = Sockets.IPv4(read(io_connect_token, TYPE_OF_IPV4_HOST))
-            port = read(io_connect_token, TYPE_OF_IPV4_PORT)
-        else # server_address_type == ADDRESS_TYPE_IPV6
-            host = Sockets.IPv6(read(io_connect_token, TYPE_OF_IPV6_HOST))
-            port = read(io_connect_token, TYPE_OF_IPV6_PORT)
+        netcode_address = try_read(io_connect_token, NetcodeInetAddr)
+        if !isnothing(netcode_address)
+            push!(netcode_addresses, netcode_address)
+        else
+            error("Unable to read a value of type NetcodeInetAddr")
         end
-
-        server_address = Sockets.InetAddr(host, port)
-        push!(server_addresses, server_address)
     end
 
     client_to_server_key = read(io_connect_token, SIZE_OF_CLIENT_TO_SERVER_KEY)
 
     server_to_client_key = read(io_connect_token, SIZE_OF_SERVER_TO_CLIENT_KEY)
 
-    @info "connect_token client readable data" io_connect_token.size netcode_version_info protocol_id create_timestamp expire_timestamp nonce timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key
+    @info "connect_token client readable data" io_connect_token.size netcode_version_info protocol_id create_timestamp expire_timestamp nonce timeout_seconds num_server_addresses netcode_addresses client_to_server_key server_to_client_key
 
     let
         # client doesn't have access to SERVER_SIDE_SHARED_KEY so it cannot decrypt the encrypted_private_connect_token_data. But I am still accessing the global variable SERVER_SIDE_SHARED_KEY and decrypting it for testing purposes
@@ -438,20 +451,15 @@ function start_client(auth_server_address, username, password)
 
         num_server_addresses = read(io_decrypted, TYPE_OF_NUM_SERVER_ADDRESSES)
 
-        server_addresses = NetcodeInetAddr[]
+        netcode_addresses = NetcodeInetAddr[]
 
         for i in 1:num_server_addresses
-            server_address_type = read(io_decrypted, TYPE_OF_ADDRESS_TYPE)
-            if server_address_type == ADDRESS_TYPE_IPV4
-                host = Sockets.IPv4(read(io_decrypted, TYPE_OF_IPV4_HOST))
-                port = read(io_decrypted, TYPE_OF_IPV4_PORT)
-            else # server_address_type == ADDRESS_TYPE_IPV6
-                host = Sockets.IPv6(read(io_decrypted, TYPE_OF_IPV6_HOST))
-                port = read(io_decrypted, TYPE_OF_IPV6_PORT)
+            netcode_address = try_read(io_decrypted, NetcodeInetAddr)
+            if !isnothing(netcode_address)
+                push!(netcode_addresses, netcode_address)
+            else
+                error("Unable to read a value of type NetcodeInetAddr")
             end
-
-            server_address = Sockets.InetAddr(host, port)
-            push!(server_addresses, server_address)
         end
 
         client_to_server_key = read(io_decrypted, SIZE_OF_CLIENT_TO_SERVER_KEY)
@@ -460,10 +468,10 @@ function start_client(auth_server_address, username, password)
 
         user_data = read(io_decrypted, SIZE_OF_USER_DATA)
 
-        @info "connect_token client un-readable data (for testing)" decrypt_status client_id timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key user_data
+        @info "connect_token client un-readable data (for testing)" decrypt_status client_id timeout_seconds num_server_addresses netcode_addresses client_to_server_key server_to_client_key user_data
     end
 
-    game_server_address = first(server_addresses)
+    game_server_address = first(netcode_addresses).address
 
     @info "Client obtained game_server_address" game_server_address
 
@@ -496,7 +504,7 @@ function auth_handler(request)
                     io = IOBuffer(maxsize = SIZE_OF_CONNECT_TOKEN)
 
                     connect_token = ConnectToken(i)
-                    @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.server_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN
+                    @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.netcode_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN
 
                     write(io, connect_token)
 
