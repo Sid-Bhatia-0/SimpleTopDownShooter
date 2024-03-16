@@ -156,6 +156,19 @@ struct EncryptedPrivateConnectToken
     connect_token::ConnectToken
 end
 
+struct ConnectTokenClient
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    create_timestamp::TYPE_OF_TIMESTAMP
+    expire_timestamp::TYPE_OF_TIMESTAMP
+    nonce::Vector{UInt8}
+    encrypted_private_connect_token_data::Vector{UInt8}
+    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
+    netcode_addresses::Vector{NetcodeInetAddr}
+    client_to_server_key::Vector{UInt8}
+    server_to_client_key::Vector{UInt8}
+end
+
 function ConnectToken(client_id)
     create_timestamp = time_ns()
     expire_timestamp = create_timestamp + CONNECT_TOKEN_EXPIRE_SECONDS * 10 ^ 9
@@ -247,6 +260,34 @@ function get_serialized_size(connect_token::ConnectToken)
     n += get_serialized_size(connect_token.client_to_server_key)
 
     n += get_serialized_size(connect_token.server_to_client_key)
+
+    return n
+end
+
+function get_serialized_size(connect_token_client::ConnectTokenClient)
+    n = 0
+
+    n += get_serialized_size(connect_token_client.netcode_version_info)
+
+    n += get_serialized_size(connect_token_client.protocol_id)
+
+    n += get_serialized_size(connect_token_client.create_timestamp)
+
+    n += get_serialized_size(connect_token_client.expire_timestamp)
+
+    n += get_serialized_size(connect_token_client.nonce)
+
+    n += get_serialized_size(connect_token_client.encrypted_private_connect_token_data)
+
+    n += get_serialized_size(connect_token_client.timeout_seconds)
+
+    n += get_serialized_size(zero(TYPE_OF_NUM_SERVER_ADDRESSES))
+
+    n += sum(get_serialized_size, connect_token_client.netcode_addresses)
+
+    n += get_serialized_size(connect_token_client.client_to_server_key)
+
+    n += get_serialized_size(connect_token_client.server_to_client_key)
 
     return n
 end
@@ -411,6 +452,78 @@ function Base.write(io::IO, padded_connect_token::PaddedConnectToken)
     return n
 end
 
+function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
+    if length(data) != SIZE_OF_PADDED_CONNECT_TOKEN
+        return nothing
+    end
+
+    io = IOBuffer(data)
+
+    netcode_version_info = read(io, SIZE_OF_NETCODE_VERSION_INFO)
+    if netcode_version_info != NETCODE_VERSION_INFO
+        return nothing
+    end
+
+    protocol_id = read(io, TYPE_OF_PROTOCOL_ID)
+    if protocol_id != PROTOCOL_ID
+        return nothing
+    end
+
+    create_timestamp = read(io, TYPE_OF_TIMESTAMP)
+    expire_timestamp = read(io, TYPE_OF_TIMESTAMP)
+    if expire_timestamp < create_timestamp
+        return nothing
+    end
+
+    nonce = read(io, SIZE_OF_NONCE)
+
+    encrypted_private_connect_token_data = read(io, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
+
+    timeout_seconds = read(io, TYPE_OF_TIMEOUT_SECONDS)
+
+    num_server_addresses = read(io, TYPE_OF_NUM_SERVER_ADDRESSES)
+    if !(1 <= num_server_addresses <= MAX_GAME_SERVERS)
+        return nothing
+    end
+
+    netcode_addresses = NetcodeInetAddr[]
+
+    for i in 1:num_server_addresses
+        netcode_address = try_read(io, NetcodeInetAddr)
+        if !isnothing(netcode_address)
+            push!(netcode_addresses, netcode_address)
+        else
+            return nothing
+        end
+    end
+
+    client_to_server_key = read(io, SIZE_OF_CLIENT_TO_SERVER_KEY)
+
+    server_to_client_key = read(io, SIZE_OF_SERVER_TO_CLIENT_KEY)
+
+    connect_token_client = ConnectTokenClient(
+        netcode_version_info,
+        protocol_id,
+        create_timestamp,
+        expire_timestamp,
+        nonce,
+        encrypted_private_connect_token_data,
+        timeout_seconds,
+        netcode_addresses,
+        client_to_server_key,
+        server_to_client_key,
+    )
+
+    size_of_connect_token_client = get_serialized_size(connect_token_client)
+
+    padding = read(io)
+    if length(padding) != (SIZE_OF_PADDED_CONNECT_TOKEN - size_of_connect_token_client) || any(!=(0), padding)
+        return nothing
+    end
+
+    return connect_token_client
+end
+
 function get_time(reference_time)
     # get time (in units of nanoseconds) since reference_time
     # places an upper bound on how much time can the program be running until time wraps around giving meaningless values
@@ -484,89 +597,12 @@ function start_client(auth_server_address, username, password)
 
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port))
 
-    io_connect_token = IOBuffer(copy(response.body))
-
-    netcode_version_info = read(io_connect_token, SIZE_OF_NETCODE_VERSION_INFO)
-
-    protocol_id = read(io_connect_token, TYPE_OF_PROTOCOL_ID)
-
-    create_timestamp = read(io_connect_token, TYPE_OF_TIMESTAMP)
-
-    expire_timestamp = read(io_connect_token, TYPE_OF_TIMESTAMP)
-
-    nonce = read(io_connect_token, SIZE_OF_NONCE)
-
-    encrypted_private_connect_token_data = read(io_connect_token, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
-
-    timeout_seconds = read(io_connect_token, TYPE_OF_TIMEOUT_SECONDS)
-
-    num_server_addresses = read(io_connect_token, TYPE_OF_NUM_SERVER_ADDRESSES)
-
-    netcode_addresses = NetcodeInetAddr[]
-
-    for i in 1:num_server_addresses
-        netcode_address = try_read(io_connect_token, NetcodeInetAddr)
-        if !isnothing(netcode_address)
-            push!(netcode_addresses, netcode_address)
-        else
-            error("Unable to read a value of type NetcodeInetAddr")
-        end
+    connect_token_client = try_read(copy(response.body), ConnectTokenClient)
+    if isnothing(connect_token_client)
+        error("Invalid connect token packet received")
     end
 
-    client_to_server_key = read(io_connect_token, SIZE_OF_CLIENT_TO_SERVER_KEY)
-
-    server_to_client_key = read(io_connect_token, SIZE_OF_SERVER_TO_CLIENT_KEY)
-
-    @info "connect_token client readable data" io_connect_token.size netcode_version_info protocol_id create_timestamp expire_timestamp nonce timeout_seconds num_server_addresses netcode_addresses client_to_server_key server_to_client_key
-
-    let
-        # client doesn't have access to SERVER_SIDE_SHARED_KEY so it cannot decrypt the encrypted_private_connect_token_data. But I am still accessing the global variable SERVER_SIDE_SHARED_KEY and decrypting it for testing purposes
-
-        decrypted = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
-        decrypted_length_ref = Ref{UInt}()
-
-        ciphertext = encrypted_private_connect_token_data
-
-        io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + SIZE_OF_TIMESTAMP)
-
-        write(io_associated_data, NETCODE_VERSION_INFO)
-
-        write(io_associated_data, protocol_id)
-
-        write(io_associated_data, expire_timestamp)
-
-        decrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(decrypted, decrypted_length_ref, C_NULL, ciphertext, length(ciphertext), io_associated_data.data, io_associated_data.size, nonce, SERVER_SIDE_SHARED_KEY)
-        @assert decrypt_status == 0
-
-        io_decrypted = IOBuffer(decrypted)
-
-        client_id = read(io_decrypted, TYPE_OF_CLIENT_ID)
-
-        timeout_seconds = read(io_decrypted, TYPE_OF_TIMEOUT_SECONDS)
-
-        num_server_addresses = read(io_decrypted, TYPE_OF_NUM_SERVER_ADDRESSES)
-
-        netcode_addresses = NetcodeInetAddr[]
-
-        for i in 1:num_server_addresses
-            netcode_address = try_read(io_decrypted, NetcodeInetAddr)
-            if !isnothing(netcode_address)
-                push!(netcode_addresses, netcode_address)
-            else
-                error("Unable to read a value of type NetcodeInetAddr")
-            end
-        end
-
-        client_to_server_key = read(io_decrypted, SIZE_OF_CLIENT_TO_SERVER_KEY)
-
-        server_to_client_key = read(io_decrypted, SIZE_OF_SERVER_TO_CLIENT_KEY)
-
-        user_data = read(io_decrypted, SIZE_OF_USER_DATA)
-
-        @info "connect_token client un-readable data (for testing)" decrypt_status client_id timeout_seconds num_server_addresses netcode_addresses client_to_server_key server_to_client_key user_data
-    end
-
-    game_server_address = first(netcode_addresses).address
+    game_server_address = first(connect_token_client.netcode_addresses).address
 
     @info "Client obtained game_server_address" game_server_address
 
