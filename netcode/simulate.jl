@@ -171,6 +171,46 @@ function ConnectToken(client_id)
     )
 end
 
+function get_serialized_size(value::Integer)
+    if !isbits(value)
+        error("Currently only isbits Integer values are supported for serialization")
+    else
+        return sizeof(value)
+    end
+end
+
+get_serialized_size(value::Vector{UInt8}) = length(value)
+
+get_serialized_size(value::Union{Sockets.IPv4, Sockets.IPv6}) = get_serialized_size(value.host)
+
+get_serialized_size(value::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}) = get_serialized_size(value.host) + sizeof(value.port)
+
+get_serialized_size(value::NetcodeInetAddr) = SIZE_OF_ADDRESS_TYPE + get_serialized_size(value.address)
+
+get_serialized_size(value::Vector{NetcodeInetAddr}) = sum(get_serialized_size, value)
+
+function get_serialized_size(value::PrivateConnectToken)
+    connect_token = value.connect_token
+
+    n = 0
+
+    n += get_serialized_size(connect_token.client_id)
+
+    n += get_serialized_size(connect_token.timeout_seconds)
+
+    n += get_serialized_size(zero(TYPE_OF_NUM_SERVER_ADDRESSES))
+
+    n += sum(get_serialized_size, connect_token.netcode_addresses)
+
+    n += get_serialized_size(connect_token.client_to_server_key)
+
+    n += get_serialized_size(connect_token.server_to_client_key)
+
+    n += get_serialized_size(connect_token.user_data)
+
+    return n
+end
+
 get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
 get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
 get_address_type(netcode_inetaddr::NetcodeInetAddr) = get_address_type(netcode_inetaddr.address)
@@ -230,8 +270,9 @@ function Base.write(io::IO, padded_private_connect_token::PaddedPrivateConnectTo
 
     n = 0
 
-    n += write(io, PrivateConnectToken(connect_token))
-
+    private_connect_token = PrivateConnectToken(connect_token)
+    n += write(io, private_connect_token)
+    @assert n == get_serialized_size(private_connect_token)
     @info "PrivateConnectToken written: $(n) bytes"
 
     for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC - n
