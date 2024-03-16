@@ -86,21 +86,12 @@ const MAX_GAME_SERVERS = 32
 
 const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
 
-const NULL_TCP_SOCKET = Sockets.TCPSocket()
-
 # TODO: salts must be randomly generated during user registration
 const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
 
 const CLIENT_USERNAME = "user1"
 
 const CLIENT_PASSWORD = "password1"
-
-struct ClientSlot
-    is_used::Bool
-    socket::Sockets.TCPSocket
-end
-
-const NULL_CLIENT_SLOT = ClientSlot(false, NULL_TCP_SOCKET)
 
 struct DebugInfo
     frame_end_time_buffer::Vector{Int}
@@ -121,6 +112,15 @@ end
 struct NetcodeInetAddr
     address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
 end
+
+const NULL_NETCODE_ADDRESS = NetcodeInetAddr(Sockets.InetAddr(Sockets.IPv4(zero(TYPE_OF_IPV4_HOST)), zero(TYPE_OF_IPV4_PORT)))
+
+struct ClientSlot
+    is_used::Bool
+    netcode_address::NetcodeInetAddr
+end
+
+const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
 
 struct ConnectToken
     netcode_version_info::Vector{UInt8}
@@ -573,21 +573,31 @@ function create_df_debug_info(debug_info)
 end
 
 function start_game_server(game_server_address, room_size)
-    room = fill(NULL_CLIENT_SLOT, 3)
+    room = fill(NULL_CLIENT_SLOT, room_size)
 
-    game_server = Sockets.listen(game_server_address)
+    socket = Sockets.UDPSocket()
+
+    Sockets.bind(socket, game_server_address.host, game_server_address.port)
+
     @info "Server started listening"
 
-    for i in 1:ROOM_SIZE
-        client_slot = ClientSlot(true, Sockets.accept(game_server))
-        room[i] = client_slot
+    while true
+        client_address, data = Sockets.recvfrom(socket)
 
-        client_address = Sockets.InetAddr(Sockets.getpeername(client_slot.socket)...)
+        for i in 1:room_size
+            if !room[i].is_used
+                client_slot = ClientSlot(true, NetcodeInetAddr(client_address))
+                room[i] = client_slot
+                @info "Socket accepted" client_address
+                break
+            end
+        end
 
-        @info "Socket accepted" client_address
+        if all(client_slot -> client_slot.is_used, room)
+            @info "Room full" game_server_address room
+            break
+        end
     end
-
-    @info "Room full" game_server room
 
     return nothing
 end
@@ -606,11 +616,9 @@ function start_client(auth_server_address, username, password)
 
     @info "Client obtained game_server_address" game_server_address
 
-    socket = Sockets.connect(game_server_address)
+    socket = Sockets.UDPSocket()
 
-    client_address = Sockets.InetAddr(Sockets.getsockname(socket)...)
-
-    @info "Client connected to game_server" client_address
+    Sockets.send(socket, game_server_address.host, game_server_address.port, "hello")
 
     return nothing
 end
