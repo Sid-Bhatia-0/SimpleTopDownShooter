@@ -130,7 +130,7 @@ struct ConnectToken
     nonce::Vector{UInt8}
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     client_id::TYPE_OF_CLIENT_ID
-    server_addresses::Vector{NetcodeInetAddr}
+    netcode_addresses::Vector{NetcodeInetAddr}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
@@ -210,10 +210,10 @@ function Base.write(io::IO, private_connect_token::PrivateConnectToken)
 
     n += write(io, connect_token.timeout_seconds)
 
-    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
+    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.netcode_addresses)))
 
-    for server_address in connect_token.server_addresses
-        n += write(io, server_address)
+    for netcode_address in connect_token.netcode_addresses
+        n += write(io, netcode_address)
     end
 
     n += write(io, connect_token.client_to_server_key)
@@ -297,10 +297,10 @@ function Base.write(io::IO, connect_token::ConnectToken)
 
     n += write(io, connect_token.timeout_seconds)
 
-    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.server_addresses)))
+    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.netcode_addresses)))
 
-    for server_address in connect_token.server_addresses
-        n += write(io, server_address)
+    for netcode_address in connect_token.netcode_addresses
+        n += write(io, netcode_address)
     end
 
     n += write(io, connect_token.client_to_server_key)
@@ -407,12 +407,12 @@ function start_client(auth_server_address, username, password)
 
     num_server_addresses = read(io_connect_token, TYPE_OF_NUM_SERVER_ADDRESSES)
 
-    server_addresses = NetcodeInetAddr[]
+    netcode_addresses = NetcodeInetAddr[]
 
     for i in 1:num_server_addresses
-        server_address = try_read(io_connect_token, NetcodeInetAddr)
-        if !isnothing(server_address)
-            push!(server_addresses, server_address)
+        netcode_address = try_read(io_connect_token, NetcodeInetAddr)
+        if !isnothing(netcode_address)
+            push!(netcode_addresses, netcode_address)
         else
             error("Unable to read a value of type NetcodeInetAddr")
         end
@@ -422,7 +422,7 @@ function start_client(auth_server_address, username, password)
 
     server_to_client_key = read(io_connect_token, SIZE_OF_SERVER_TO_CLIENT_KEY)
 
-    @info "connect_token client readable data" io_connect_token.size netcode_version_info protocol_id create_timestamp expire_timestamp nonce timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key
+    @info "connect_token client readable data" io_connect_token.size netcode_version_info protocol_id create_timestamp expire_timestamp nonce timeout_seconds num_server_addresses netcode_addresses client_to_server_key server_to_client_key
 
     let
         # client doesn't have access to SERVER_SIDE_SHARED_KEY so it cannot decrypt the encrypted_private_connect_token_data. But I am still accessing the global variable SERVER_SIDE_SHARED_KEY and decrypting it for testing purposes
@@ -451,12 +451,12 @@ function start_client(auth_server_address, username, password)
 
         num_server_addresses = read(io_decrypted, TYPE_OF_NUM_SERVER_ADDRESSES)
 
-        server_addresses = NetcodeInetAddr[]
+        netcode_addresses = NetcodeInetAddr[]
 
         for i in 1:num_server_addresses
-            server_address = try_read(io_decrypted, NetcodeInetAddr)
-            if !isnothing(server_address)
-                push!(server_addresses, server_address)
+            netcode_address = try_read(io_decrypted, NetcodeInetAddr)
+            if !isnothing(netcode_address)
+                push!(netcode_addresses, netcode_address)
             else
                 error("Unable to read a value of type NetcodeInetAddr")
             end
@@ -468,10 +468,10 @@ function start_client(auth_server_address, username, password)
 
         user_data = read(io_decrypted, SIZE_OF_USER_DATA)
 
-        @info "connect_token client un-readable data (for testing)" decrypt_status client_id timeout_seconds num_server_addresses server_addresses client_to_server_key server_to_client_key user_data
+        @info "connect_token client un-readable data (for testing)" decrypt_status client_id timeout_seconds num_server_addresses netcode_addresses client_to_server_key server_to_client_key user_data
     end
 
-    game_server_address = first(server_addresses).address
+    game_server_address = first(netcode_addresses).address
 
     @info "Client obtained game_server_address" game_server_address
 
@@ -504,7 +504,7 @@ function auth_handler(request)
                     io = IOBuffer(maxsize = SIZE_OF_CONNECT_TOKEN)
 
                     connect_token = ConnectToken(i)
-                    @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.server_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN
+                    @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.netcode_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN
 
                     write(io, connect_token)
 
