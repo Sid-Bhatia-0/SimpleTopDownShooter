@@ -473,8 +473,6 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
 
     server_to_client_key = read(io, SIZE_OF_SERVER_TO_CLIENT_KEY)
 
-    server_to_client_key = read(io, SIZE_OF_SERVER_TO_CLIENT_KEY)
-
     return ConnectTokenClient(
         netcode_version_info,
         protocol_id,
