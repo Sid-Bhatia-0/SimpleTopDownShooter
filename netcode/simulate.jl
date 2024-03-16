@@ -484,6 +484,12 @@ function start_client(auth_server_address, username, password)
 
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port))
 
+    data = response.body
+    if length(data) != SIZE_OF_PADDED_CONNECT_TOKEN
+        @error "Invalid connect token packet"
+        return nothing
+    end
+
     io_connect_token = IOBuffer(copy(response.body))
 
     netcode_version_info = read(io_connect_token, SIZE_OF_NETCODE_VERSION_INFO)
