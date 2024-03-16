@@ -51,7 +51,7 @@ const SIZE_OF_HMAC = 16
 
 const SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA = 1024
 
-const SIZE_OF_CONNECT_TOKEN = 2048
+const SIZE_OF_PADDED_CONNECT_TOKEN = 2048
 
 const ROOM_SIZE = 3
 
@@ -136,6 +136,10 @@ struct ConnectToken
     user_data::Vector{UInt8}
 end
 
+struct PaddedConnectToken
+    connect_token::ConnectToken
+end
+
 struct PrivateConnectToken
     connect_token::ConnectToken
 end
@@ -169,6 +173,82 @@ function ConnectToken(client_id)
         rand(UInt8, SIZE_OF_SERVER_TO_CLIENT_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
     )
+end
+
+function get_serialized_size(value::Integer)
+    if !isbits(value)
+        error("Currently only isbits Integer values are supported for serialization")
+    else
+        return sizeof(value)
+    end
+end
+
+get_serialized_size(value::Vector{UInt8}) = length(value)
+
+get_serialized_size(value::Union{Sockets.IPv4, Sockets.IPv6}) = get_serialized_size(value.host)
+
+get_serialized_size(value::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}) = get_serialized_size(value.host) + sizeof(value.port)
+
+get_serialized_size(value::NetcodeInetAddr) = SIZE_OF_ADDRESS_TYPE + get_serialized_size(value.address)
+
+get_serialized_size(value::Vector{NetcodeInetAddr}) = sum(get_serialized_size, value)
+
+get_serialized_size(value::EncryptedPrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
+
+get_serialized_size(value::PaddedPrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
+
+get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_size(value.connect_token.netcode_version_info) + get_serialized_size(value.connect_token.protocol_id) + get_serialized_size(value.connect_token.expire_timestamp)
+
+get_serialized_size(value::PaddedConnectToken) = SIZE_OF_PADDED_CONNECT_TOKEN
+
+function get_serialized_size(value::PrivateConnectToken)
+    connect_token = value.connect_token
+
+    n = 0
+
+    n += get_serialized_size(connect_token.client_id)
+
+    n += get_serialized_size(connect_token.timeout_seconds)
+
+    n += get_serialized_size(zero(TYPE_OF_NUM_SERVER_ADDRESSES))
+
+    n += sum(get_serialized_size, connect_token.netcode_addresses)
+
+    n += get_serialized_size(connect_token.client_to_server_key)
+
+    n += get_serialized_size(connect_token.server_to_client_key)
+
+    n += get_serialized_size(connect_token.user_data)
+
+    return n
+end
+
+function get_serialized_size(connect_token::ConnectToken)
+    n = 0
+
+    n += get_serialized_size(connect_token.netcode_version_info)
+
+    n += get_serialized_size(connect_token.protocol_id)
+
+    n += get_serialized_size(connect_token.create_timestamp)
+
+    n += get_serialized_size(connect_token.expire_timestamp)
+
+    n += get_serialized_size(connect_token.nonce)
+
+    n += get_serialized_size(EncryptedPrivateConnectToken(connect_token))
+
+    n += get_serialized_size(connect_token.timeout_seconds)
+
+    n += get_serialized_size(zero(TYPE_OF_NUM_SERVER_ADDRESSES))
+
+    n += sum(get_serialized_size, connect_token.netcode_addresses)
+
+    n += get_serialized_size(connect_token.client_to_server_key)
+
+    n += get_serialized_size(connect_token.server_to_client_key)
+
+    return n
 end
 
 get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
@@ -230,8 +310,9 @@ function Base.write(io::IO, padded_private_connect_token::PaddedPrivateConnectTo
 
     n = 0
 
-    n += write(io, PrivateConnectToken(connect_token))
-
+    private_connect_token = PrivateConnectToken(connect_token)
+    n += write(io, private_connect_token)
+    @assert n == get_serialized_size(private_connect_token)
     @info "PrivateConnectToken written: $(n) bytes"
 
     for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC - n
@@ -258,15 +339,19 @@ end
 function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateConnectToken)
     connect_token = encrypted_private_connect_token.connect_token
 
-    io_message = IOBuffer(maxsize = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
-    message_length = write(io_message, PaddedPrivateConnectToken(connect_token))
-    @assert message_length == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
+    padded_private_connect_token = PaddedPrivateConnectToken(connect_token)
+    size_of_padded_private_connect_token = get_serialized_size(padded_private_connect_token)
+    io_message = IOBuffer(maxsize = size_of_padded_private_connect_token)
+    message_length = write(io_message, padded_private_connect_token)
     @info "PaddedPrivateConnectToken written: $(message_length) bytes"
+    @assert message_length == size_of_padded_private_connect_token
 
-    io_associated_data = IOBuffer(maxsize = SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + SIZE_OF_TIMESTAMP)
-    associated_data_length = write(io_associated_data, PrivateConnectTokenAssociatedData(connect_token))
-    @assert associated_data_length == SIZE_OF_NETCODE_VERSION_INFO + SIZE_OF_PROTOCOL_ID + SIZE_OF_TIMESTAMP
+    private_connect_token_associated_data = PrivateConnectTokenAssociatedData(connect_token)
+    size_of_private_connect_token_associated_data = get_serialized_size(private_connect_token_associated_data)
+    io_associated_data = IOBuffer(maxsize = size_of_private_connect_token_associated_data)
+    associated_data_length = write(io_associated_data, private_connect_token_associated_data)
     @info "PrivateConnectTokenAssociatedData written: $(associated_data_length) bytes"
+    @assert associated_data_length == size_of_private_connect_token_associated_data
 
     ciphertext = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     ciphertext_length_ref = Ref{UInt}()
@@ -307,9 +392,19 @@ function Base.write(io::IO, connect_token::ConnectToken)
 
     n += write(io, connect_token.server_to_client_key)
 
-    @info "number of bytes without padding: $(n)"
+    return n
+end
 
-    for i in 1 : SIZE_OF_CONNECT_TOKEN - n
+function Base.write(io::IO, padded_connect_token::PaddedConnectToken)
+    connect_token = padded_connect_token.connect_token
+
+    n = 0
+
+    n += write(io, connect_token)
+    @assert n == get_serialized_size(connect_token)
+    @info "ConnectToken written: $(n) bytes"
+
+    for i in 1 : SIZE_OF_PADDED_CONNECT_TOKEN - n
         n += write(io, UInt8(0))
     end
 
@@ -501,10 +596,10 @@ function auth_handler(request)
                 return HTTP.Response(400, "ERROR: Invalid credentials")
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
-                    io = IOBuffer(maxsize = SIZE_OF_CONNECT_TOKEN)
+                    io = IOBuffer(maxsize = SIZE_OF_PADDED_CONNECT_TOKEN)
 
                     connect_token = ConnectToken(i)
-                    @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.netcode_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN
+                    @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.netcode_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_PADDED_CONNECT_TOKEN
 
                     write(io, connect_token)
 
