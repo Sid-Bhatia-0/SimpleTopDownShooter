@@ -87,6 +87,8 @@ const MAX_GAME_SERVERS = 32
 const TYPE_OF_PACKET_TYPE = UInt8
 const PACKET_TYPE_CONNECTION_REQUEST = TYPE_OF_PACKET_TYPE(0)
 
+const SIZE_OF_CONNECTION_REQUEST_PACKET = 1078
+
 const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
 
 # TODO: salts must be randomly generated during user registration
@@ -173,7 +175,12 @@ struct ConnectTokenClient
 end
 
 struct ConnectionRequestPacket
-    connect_token_client::ConnectTokenClient
+    packet_type::TYPE_OF_PACKET_TYPE
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    expire_timestamp::TYPE_OF_TIMESTAMP
+    nonce::Vector{UInt8}
+    encrypted_private_connect_token_data::Vector{UInt8}
 end
 
 function ConnectToken(client_id)
@@ -300,21 +307,19 @@ function get_serialized_size(connect_token_client::ConnectTokenClient)
 end
 
 function get_serialized_size(connection_request_packet::ConnectionRequestPacket)
-    connect_token_client = connection_request_packet.connect_token_client
-
     n = 0
 
-    n += get_serialized_size(PACKET_TYPE_CONNECTION_REQUEST)
+    n += get_serialized_size(connection_request_packet.packet_type)
 
-    n += get_serialized_size(connect_token_client.netcode_version_info)
+    n += get_serialized_size(connection_request_packet.netcode_version_info)
 
-    n += get_serialized_size(connect_token_client.protocol_id)
+    n += get_serialized_size(connection_request_packet.protocol_id)
 
-    n += get_serialized_size(connect_token_client.expire_timestamp)
+    n += get_serialized_size(connection_request_packet.expire_timestamp)
 
-    n += get_serialized_size(connect_token_client.nonce)
+    n += get_serialized_size(connection_request_packet.nonce)
 
-    n += get_serialized_size(connect_token_client.encrypted_private_connect_token_data)
+    n += get_serialized_size(connection_request_packet.encrypted_private_connect_token_data)
 
     return n
 end
@@ -552,23 +557,64 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
 end
 
 function Base.write(io::IO, connection_request_packet::ConnectionRequestPacket)
-    connect_token_client = connection_request_packet.connect_token_client
-
     n = 0
 
-    n += write(io, PACKET_TYPE_CONNECTION_REQUEST)
+    n += write(io, connection_request_packet.packet_type)
 
-    n += write(io, connect_token_client.netcode_version_info)
+    n += write(io, connection_request_packet.netcode_version_info)
 
-    n += write(io, connect_token_client.protocol_id)
+    n += write(io, connection_request_packet.protocol_id)
 
-    n += write(io, connect_token_client.expire_timestamp)
+    n += write(io, connection_request_packet.expire_timestamp)
 
-    n += write(io, connect_token_client.nonce)
+    n += write(io, connection_request_packet.nonce)
 
-    n += write(io, connect_token_client.encrypted_private_connect_token_data)
+    n += write(io, connection_request_packet.encrypted_private_connect_token_data)
 
     return n
+end
+
+function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
+    if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
+        return nothing
+    end
+
+    io = IOBuffer(data)
+
+    packet_type = read(io, TYPE_OF_PACKET_TYPE)
+    if packet_type != PACKET_TYPE_CONNECTION_REQUEST
+        return nothing
+    end
+
+    netcode_version_info = read(io, SIZE_OF_NETCODE_VERSION_INFO)
+    if netcode_version_info != NETCODE_VERSION_INFO
+        return nothing
+    end
+
+    protocol_id = read(io, TYPE_OF_PROTOCOL_ID)
+    if protocol_id != PROTOCOL_ID
+        return nothing
+    end
+
+    expire_timestamp = read(io, TYPE_OF_TIMESTAMP)
+    if expire_timestamp <= time_ns()
+        return nothing
+    end
+
+    nonce = read(io, SIZE_OF_NONCE)
+
+    encrypted_private_connect_token_data = read(io, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
+
+    connection_request_packet = ConnectionRequestPacket(
+        packet_type,
+        netcode_version_info,
+        protocol_id,
+        expire_timestamp,
+        nonce,
+        encrypted_private_connect_token_data,
+    )
+
+    return connection_request_packet
 end
 
 function get_time(reference_time)
@@ -631,18 +677,34 @@ function start_game_server(game_server_address, room_size)
     while true
         client_address, data = Sockets.recvfrom(socket)
 
-        for i in 1:room_size
-            if !room[i].is_used
-                client_slot = ClientSlot(true, NetcodeInetAddr(client_address))
-                room[i] = client_slot
-                @info "Socket accepted" client_address
-                break
-            end
+        if isempty(data)
+            continue
         end
 
-        if all(client_slot -> client_slot.is_used, room)
-            @info "Room full" game_server_address room
-            break
+        if data[1] == PACKET_TYPE_CONNECTION_REQUEST
+            connection_request_packet = try_read(data, ConnectionRequestPacket)
+
+            if !isnothing(connection_request_packet)
+                @info "Received PACKET_TYPE_CONNECTION_REQUEST"
+
+                for i in 1:room_size
+                    if !room[i].is_used
+                        client_slot = ClientSlot(true, NetcodeInetAddr(client_address))
+                        room[i] = client_slot
+                        @info "Client accepted" client_address
+                        break
+                    end
+                end
+
+                if all(client_slot -> client_slot.is_used, room)
+                    @info "Room full" game_server_address room
+                    break
+                end
+            else
+                @info "Received malformed PACKET_TYPE_CONNECTION_REQUEST"
+            end
+        else
+            @info "Received unknown packet type"
         end
     end
 
@@ -665,7 +727,14 @@ function start_client(auth_server_address, username, password)
 
     socket = Sockets.UDPSocket()
 
-    connection_request_packet = ConnectionRequestPacket(connect_token_client)
+    connection_request_packet = ConnectionRequestPacket(
+        PACKET_TYPE_CONNECTION_REQUEST,
+        connect_token_client.netcode_version_info,
+        connect_token_client.protocol_id,
+        connect_token_client.expire_timestamp,
+        connect_token_client.nonce,
+        connect_token_client.encrypted_private_connect_token_data,
+    )
     size_of_connection_request_packet = get_serialized_size(connection_request_packet)
     io_connection_request_packet = IOBuffer(maxsize = size_of_connection_request_packet)
     connection_request_packet_length = write(io_connection_request_packet, connection_request_packet)
