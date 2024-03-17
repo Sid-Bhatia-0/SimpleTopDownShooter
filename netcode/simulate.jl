@@ -84,6 +84,9 @@ const MAX_GAME_SERVERS = 32
 
 @assert 1 <= length(GAME_SERVER_ADDRESSES) <= MAX_GAME_SERVERS
 
+const TYPE_OF_PACKET_TYPE = UInt8
+const PACKET_TYPE_CONNECTION_REQUEST = TYPE_OF_PACKET_TYPE(0)
+
 const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
 
 # TODO: salts must be randomly generated during user registration
@@ -167,6 +170,10 @@ struct ConnectTokenClient
     netcode_addresses::Vector{NetcodeInetAddr}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
+end
+
+struct ConnectionRequestPacket
+    connect_token_client::ConnectTokenClient
 end
 
 function ConnectToken(client_id)
@@ -288,6 +295,26 @@ function get_serialized_size(connect_token_client::ConnectTokenClient)
     n += get_serialized_size(connect_token_client.client_to_server_key)
 
     n += get_serialized_size(connect_token_client.server_to_client_key)
+
+    return n
+end
+
+function get_serialized_size(connection_request_packet::ConnectionRequestPacket)
+    connect_token_client = connection_request_packet.connect_token_client
+
+    n = 0
+
+    n += get_serialized_size(PACKET_TYPE_CONNECTION_REQUEST)
+
+    n += get_serialized_size(connect_token_client.netcode_version_info)
+
+    n += get_serialized_size(connect_token_client.protocol_id)
+
+    n += get_serialized_size(connect_token_client.expire_timestamp)
+
+    n += get_serialized_size(connect_token_client.nonce)
+
+    n += get_serialized_size(connect_token_client.encrypted_private_connect_token_data)
 
     return n
 end
@@ -524,6 +551,26 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
     return connect_token_client
 end
 
+function Base.write(io::IO, connection_request_packet::ConnectionRequestPacket)
+    connect_token_client = connection_request_packet.connect_token_client
+
+    n = 0
+
+    n += write(io, PACKET_TYPE_CONNECTION_REQUEST)
+
+    n += write(io, connect_token_client.netcode_version_info)
+
+    n += write(io, connect_token_client.protocol_id)
+
+    n += write(io, connect_token_client.expire_timestamp)
+
+    n += write(io, connect_token_client.nonce)
+
+    n += write(io, connect_token_client.encrypted_private_connect_token_data)
+
+    return n
+end
+
 function get_time(reference_time)
     # get time (in units of nanoseconds) since reference_time
     # places an upper bound on how much time can the program be running until time wraps around giving meaningless values
@@ -618,7 +665,13 @@ function start_client(auth_server_address, username, password)
 
     socket = Sockets.UDPSocket()
 
-    Sockets.send(socket, game_server_address.host, game_server_address.port, "hello")
+    connection_request_packet = ConnectionRequestPacket(connect_token_client)
+    size_of_connection_request_packet = get_serialized_size(connection_request_packet)
+    io_connection_request_packet = IOBuffer(maxsize = size_of_connection_request_packet)
+    connection_request_packet_length = write(io_connection_request_packet, connection_request_packet)
+    @assert connection_request_packet_length == size_of_connection_request_packet
+
+    Sockets.send(socket, game_server_address.host, game_server_address.port, io_connection_request_packet.data)
 
     return nothing
 end
