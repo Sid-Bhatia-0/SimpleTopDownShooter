@@ -161,7 +161,7 @@ struct EncryptedPrivateConnectToken
     connect_token::ConnectToken
 end
 
-struct ConnectTokenClient
+struct ConnectTokenPacket
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
     create_timestamp::TYPE_OF_TIMESTAMP
@@ -279,7 +279,7 @@ function get_serialized_size(connect_token::ConnectToken)
     return n
 end
 
-function get_serialized_size(connect_token_client::ConnectTokenClient)
+function get_serialized_size(connect_token_client::ConnectTokenPacket)
     n = 0
 
     n += get_serialized_size(connect_token_client.netcode_version_info)
@@ -485,7 +485,7 @@ function Base.write(io::IO, padded_connect_token::PaddedConnectToken)
     return n
 end
 
-function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
+function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
     if length(data) != SIZE_OF_PADDED_CONNECT_TOKEN
         return nothing
     end
@@ -534,7 +534,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
 
     server_to_client_key = read(io, SIZE_OF_SERVER_TO_CLIENT_KEY)
 
-    connect_token_client = ConnectTokenClient(
+    connect_token_client = ConnectTokenPacket(
         netcode_version_info,
         protocol_id,
         create_timestamp,
@@ -718,7 +718,7 @@ function start_client(auth_server_address, username, password)
 
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port))
 
-    connect_token_client = try_read(copy(response.body), ConnectTokenClient)
+    connect_token_client = try_read(copy(response.body), ConnectTokenPacket)
     if isnothing(connect_token_client)
         error("Invalid connect token packet received")
     end
