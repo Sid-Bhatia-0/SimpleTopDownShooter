@@ -161,7 +161,9 @@ struct EncryptedPrivateConnectToken
     connect_token::ConnectToken
 end
 
-struct ConnectTokenPacket
+abstract type AbstractPacket end
+
+struct ConnectTokenPacket <: AbstractPacket
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
     create_timestamp::TYPE_OF_TIMESTAMP
@@ -175,7 +177,7 @@ struct ConnectTokenPacket
     server_to_client_key::Vector{UInt8}
 end
 
-struct ConnectionRequestPacket
+struct ConnectionRequestPacket <: AbstractPacket
     packet_type::TYPE_OF_PACKET_TYPE
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
