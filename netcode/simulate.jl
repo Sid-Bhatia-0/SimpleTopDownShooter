@@ -169,6 +169,7 @@ struct ConnectTokenClient
     nonce::Vector{UInt8}
     encrypted_private_connect_token_data::Vector{UInt8}
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
+    num_server_addresses::TYPE_OF_NUM_SERVER_ADDRESSES
     netcode_addresses::Vector{NetcodeInetAddr}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
@@ -295,7 +296,7 @@ function get_serialized_size(connect_token_client::ConnectTokenClient)
 
     n += get_serialized_size(connect_token_client.timeout_seconds)
 
-    n += get_serialized_size(zero(TYPE_OF_NUM_SERVER_ADDRESSES))
+    n += get_serialized_size(connect_token_client.num_server_addresses)
 
     n += sum(get_serialized_size, connect_token_client.netcode_addresses)
 
@@ -541,6 +542,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
         nonce,
         encrypted_private_connect_token_data,
         timeout_seconds,
+        num_server_addresses,
         netcode_addresses,
         client_to_server_key,
         server_to_client_key,
