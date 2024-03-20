@@ -516,6 +516,16 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
     return connect_token_client
 end
 
+function Base.write(io::IO, packet::AbstractPacket)
+    n = 0
+
+    for i in 1:fieldcount(typeof(packet))
+        n += write(io, getfield(packet, i))
+    end
+
+    return n
+end
+
 function Base.write(io::IO, connection_request_packet::ConnectionRequestPacket)
     n = 0
 
