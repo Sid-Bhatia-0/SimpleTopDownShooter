@@ -231,6 +231,8 @@ get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_s
 
 get_serialized_size(value::PaddedConnectToken) = SIZE_OF_PADDED_CONNECT_TOKEN
 
+get_serialized_size(packet::AbstractPacket) = sum(get_serialized_size(getfield(packet, i)) for i in 1:fieldcount(typeof(packet)))
+
 function get_serialized_size(value::PrivateConnectToken)
     connect_token = value.connect_token
 
@@ -277,52 +279,6 @@ function get_serialized_size(connect_token::ConnectToken)
     n += get_serialized_size(connect_token.client_to_server_key)
 
     n += get_serialized_size(connect_token.server_to_client_key)
-
-    return n
-end
-
-function get_serialized_size(connect_token_client::ConnectTokenPacket)
-    n = 0
-
-    n += get_serialized_size(connect_token_client.netcode_version_info)
-
-    n += get_serialized_size(connect_token_client.protocol_id)
-
-    n += get_serialized_size(connect_token_client.create_timestamp)
-
-    n += get_serialized_size(connect_token_client.expire_timestamp)
-
-    n += get_serialized_size(connect_token_client.nonce)
-
-    n += get_serialized_size(connect_token_client.encrypted_private_connect_token_data)
-
-    n += get_serialized_size(connect_token_client.timeout_seconds)
-
-    n += get_serialized_size(connect_token_client.num_server_addresses)
-
-    n += sum(get_serialized_size, connect_token_client.netcode_addresses)
-
-    n += get_serialized_size(connect_token_client.client_to_server_key)
-
-    n += get_serialized_size(connect_token_client.server_to_client_key)
-
-    return n
-end
-
-function get_serialized_size(connection_request_packet::ConnectionRequestPacket)
-    n = 0
-
-    n += get_serialized_size(connection_request_packet.packet_type)
-
-    n += get_serialized_size(connection_request_packet.netcode_version_info)
-
-    n += get_serialized_size(connection_request_packet.protocol_id)
-
-    n += get_serialized_size(connection_request_packet.expire_timestamp)
-
-    n += get_serialized_size(connection_request_packet.nonce)
-
-    n += get_serialized_size(connection_request_packet.encrypted_private_connect_token_data)
 
     return n
 end
