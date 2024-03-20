@@ -526,24 +526,6 @@ function Base.write(io::IO, packet::AbstractPacket)
     return n
 end
 
-function Base.write(io::IO, connection_request_packet::ConnectionRequestPacket)
-    n = 0
-
-    n += write(io, connection_request_packet.packet_type)
-
-    n += write(io, connection_request_packet.netcode_version_info)
-
-    n += write(io, connection_request_packet.protocol_id)
-
-    n += write(io, connection_request_packet.expire_timestamp)
-
-    n += write(io, connection_request_packet.nonce)
-
-    n += write(io, connection_request_packet.encrypted_private_connect_token_data)
-
-    return n
-end
-
 function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
     if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
         return nothing
