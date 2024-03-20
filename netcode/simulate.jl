@@ -84,9 +84,12 @@ const MAX_GAME_SERVERS = 32
 
 @assert 1 <= length(GAME_SERVER_ADDRESSES) <= MAX_GAME_SERVERS
 
-const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
+const TYPE_OF_PACKET_TYPE = UInt8
+const PACKET_TYPE_CONNECTION_REQUEST = TYPE_OF_PACKET_TYPE(0)
 
-const NULL_TCP_SOCKET = Sockets.TCPSocket()
+const SIZE_OF_CONNECTION_REQUEST_PACKET = 1078
+
+const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
 
 # TODO: salts must be randomly generated during user registration
 const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
@@ -94,13 +97,6 @@ const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(
 const CLIENT_USERNAME = "user1"
 
 const CLIENT_PASSWORD = "password1"
-
-struct ClientSlot
-    is_used::Bool
-    socket::Sockets.TCPSocket
-end
-
-const NULL_CLIENT_SLOT = ClientSlot(false, NULL_TCP_SOCKET)
 
 struct DebugInfo
     frame_end_time_buffer::Vector{Int}
@@ -121,6 +117,15 @@ end
 struct NetcodeInetAddr
     address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
 end
+
+const NULL_NETCODE_ADDRESS = NetcodeInetAddr(Sockets.InetAddr(Sockets.IPv4(zero(TYPE_OF_IPV4_HOST)), zero(TYPE_OF_IPV4_PORT)))
+
+struct ClientSlot
+    is_used::Bool
+    netcode_address::NetcodeInetAddr
+end
+
+const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
 
 struct ConnectToken
     netcode_version_info::Vector{UInt8}
@@ -167,6 +172,15 @@ struct ConnectTokenClient
     netcode_addresses::Vector{NetcodeInetAddr}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
+end
+
+struct ConnectionRequestPacket
+    packet_type::TYPE_OF_PACKET_TYPE
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    expire_timestamp::TYPE_OF_TIMESTAMP
+    nonce::Vector{UInt8}
+    encrypted_private_connect_token_data::Vector{UInt8}
 end
 
 function ConnectToken(client_id)
@@ -288,6 +302,24 @@ function get_serialized_size(connect_token_client::ConnectTokenClient)
     n += get_serialized_size(connect_token_client.client_to_server_key)
 
     n += get_serialized_size(connect_token_client.server_to_client_key)
+
+    return n
+end
+
+function get_serialized_size(connection_request_packet::ConnectionRequestPacket)
+    n = 0
+
+    n += get_serialized_size(connection_request_packet.packet_type)
+
+    n += get_serialized_size(connection_request_packet.netcode_version_info)
+
+    n += get_serialized_size(connection_request_packet.protocol_id)
+
+    n += get_serialized_size(connection_request_packet.expire_timestamp)
+
+    n += get_serialized_size(connection_request_packet.nonce)
+
+    n += get_serialized_size(connection_request_packet.encrypted_private_connect_token_data)
 
     return n
 end
@@ -524,6 +556,67 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenClient})
     return connect_token_client
 end
 
+function Base.write(io::IO, connection_request_packet::ConnectionRequestPacket)
+    n = 0
+
+    n += write(io, connection_request_packet.packet_type)
+
+    n += write(io, connection_request_packet.netcode_version_info)
+
+    n += write(io, connection_request_packet.protocol_id)
+
+    n += write(io, connection_request_packet.expire_timestamp)
+
+    n += write(io, connection_request_packet.nonce)
+
+    n += write(io, connection_request_packet.encrypted_private_connect_token_data)
+
+    return n
+end
+
+function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
+    if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
+        return nothing
+    end
+
+    io = IOBuffer(data)
+
+    packet_type = read(io, TYPE_OF_PACKET_TYPE)
+    if packet_type != PACKET_TYPE_CONNECTION_REQUEST
+        return nothing
+    end
+
+    netcode_version_info = read(io, SIZE_OF_NETCODE_VERSION_INFO)
+    if netcode_version_info != NETCODE_VERSION_INFO
+        return nothing
+    end
+
+    protocol_id = read(io, TYPE_OF_PROTOCOL_ID)
+    if protocol_id != PROTOCOL_ID
+        return nothing
+    end
+
+    expire_timestamp = read(io, TYPE_OF_TIMESTAMP)
+    if expire_timestamp <= time_ns()
+        return nothing
+    end
+
+    nonce = read(io, SIZE_OF_NONCE)
+
+    encrypted_private_connect_token_data = read(io, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
+
+    connection_request_packet = ConnectionRequestPacket(
+        packet_type,
+        netcode_version_info,
+        protocol_id,
+        expire_timestamp,
+        nonce,
+        encrypted_private_connect_token_data,
+    )
+
+    return connection_request_packet
+end
+
 function get_time(reference_time)
     # get time (in units of nanoseconds) since reference_time
     # places an upper bound on how much time can the program be running until time wraps around giving meaningless values
@@ -573,21 +666,47 @@ function create_df_debug_info(debug_info)
 end
 
 function start_game_server(game_server_address, room_size)
-    room = fill(NULL_CLIENT_SLOT, 3)
+    room = fill(NULL_CLIENT_SLOT, room_size)
 
-    game_server = Sockets.listen(game_server_address)
+    socket = Sockets.UDPSocket()
+
+    Sockets.bind(socket, game_server_address.host, game_server_address.port)
+
     @info "Server started listening"
 
-    for i in 1:ROOM_SIZE
-        client_slot = ClientSlot(true, Sockets.accept(game_server))
-        room[i] = client_slot
+    while true
+        client_address, data = Sockets.recvfrom(socket)
 
-        client_address = Sockets.InetAddr(Sockets.getpeername(client_slot.socket)...)
+        if isempty(data)
+            continue
+        end
 
-        @info "Socket accepted" client_address
+        if data[1] == PACKET_TYPE_CONNECTION_REQUEST
+            connection_request_packet = try_read(data, ConnectionRequestPacket)
+
+            if !isnothing(connection_request_packet)
+                @info "Received PACKET_TYPE_CONNECTION_REQUEST"
+
+                for i in 1:room_size
+                    if !room[i].is_used
+                        client_slot = ClientSlot(true, NetcodeInetAddr(client_address))
+                        room[i] = client_slot
+                        @info "Client accepted" client_address
+                        break
+                    end
+                end
+
+                if all(client_slot -> client_slot.is_used, room)
+                    @info "Room full" game_server_address room
+                    break
+                end
+            else
+                @info "Received malformed PACKET_TYPE_CONNECTION_REQUEST"
+            end
+        else
+            @info "Received unknown packet type"
+        end
     end
-
-    @info "Room full" game_server room
 
     return nothing
 end
@@ -606,11 +725,22 @@ function start_client(auth_server_address, username, password)
 
     @info "Client obtained game_server_address" game_server_address
 
-    socket = Sockets.connect(game_server_address)
+    socket = Sockets.UDPSocket()
 
-    client_address = Sockets.InetAddr(Sockets.getsockname(socket)...)
+    connection_request_packet = ConnectionRequestPacket(
+        PACKET_TYPE_CONNECTION_REQUEST,
+        connect_token_client.netcode_version_info,
+        connect_token_client.protocol_id,
+        connect_token_client.expire_timestamp,
+        connect_token_client.nonce,
+        connect_token_client.encrypted_private_connect_token_data,
+    )
+    size_of_connection_request_packet = get_serialized_size(connection_request_packet)
+    io_connection_request_packet = IOBuffer(maxsize = size_of_connection_request_packet)
+    connection_request_packet_length = write(io_connection_request_packet, connection_request_packet)
+    @assert connection_request_packet_length == size_of_connection_request_packet
 
-    @info "Client connected to game_server" client_address
+    Sockets.send(socket, game_server_address.host, game_server_address.port, io_connection_request_packet.data)
 
     return nothing
 end
