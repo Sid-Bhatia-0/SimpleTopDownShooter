@@ -516,6 +516,16 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
     return connect_token_client
 end
 
+function Base.write(io::IO, netcode_addresses::Vector{NetcodeInetAddr})
+    n = 0
+
+    for netcode_address in netcode_addresses
+        n += write(io, netcode_address)
+    end
+
+    return n
+end
+
 function Base.write(io::IO, packet::AbstractPacket)
     n = 0
 
@@ -567,6 +577,27 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
     )
 
     return connection_request_packet
+end
+
+function ConnectTokenPacket(connect_token::ConnectToken)
+    io_encrypted_private_connect_token_data = IOBuffer(maxsize = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
+
+    write(io_encrypted_private_connect_token_data, EncryptedPrivateConnectToken(connect_token))
+
+    return ConnectTokenPacket(
+        connect_token.netcode_version_info,
+        connect_token.protocol_id,
+        connect_token.create_timestamp,
+        connect_token.expire_timestamp,
+        connect_token.nonce,
+        io_encrypted_private_connect_token_data.data,
+        connect_token.timeout_seconds,
+        length(connect_token.netcode_addresses),
+        # convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.netcode_addresses)),
+        connect_token.netcode_addresses,
+        connect_token.client_to_server_key,
+        connect_token.server_to_client_key,
+    )
 end
 
 function get_time(reference_time)
@@ -714,12 +745,14 @@ function auth_handler(request)
                 return HTTP.Response(400, "ERROR: Invalid credentials")
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
-                    io = IOBuffer(maxsize = SIZE_OF_PADDED_CONNECT_TOKEN)
+                    io = IOBuffer(zeros(UInt8, SIZE_OF_PADDED_CONNECT_TOKEN), write = true, maxsize = SIZE_OF_PADDED_CONNECT_TOKEN)
 
                     connect_token = ConnectToken(i)
                     @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.netcode_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_PADDED_CONNECT_TOKEN
 
-                    write(io, connect_token)
+                    connect_token_packet = ConnectTokenPacket(connect_token)
+
+                    write(io, connect_token_packet)
 
                     return HTTP.Response(200, io.data)
                 else
