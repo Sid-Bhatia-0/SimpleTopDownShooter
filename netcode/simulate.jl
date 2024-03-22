@@ -339,6 +339,13 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
 
     server_to_client_key = read(io, SIZE_OF_SERVER_TO_CLIENT_KEY)
 
+    while !eof(io)
+        x = read(io, UInt8)
+        if x != 0
+            return nothing
+        end
+    end
+
     connect_token_packet = ConnectTokenPacket(
         netcode_version_info,
         protocol_id,
@@ -352,19 +359,6 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
         client_to_server_key,
         server_to_client_key,
     )
-
-    expected_padding_size = get_padding_size(connect_token_packet)
-
-    for i in 1:expected_padding_size
-        x = read(io, UInt8)
-        if x != 0
-            return nothing
-        end
-    end
-
-    if !eof(io)
-        return nothing
-    end
 
     return connect_token_packet
 end
