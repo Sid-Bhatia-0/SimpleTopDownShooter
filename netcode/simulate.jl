@@ -233,7 +233,16 @@ get_serialized_size(value::PaddedConnectToken) = SIZE_OF_PADDED_CONNECT_TOKEN
 
 get_serialized_size_fields(value) = sum(get_serialized_size(getfield(value, i)) for i in 1:fieldcount(typeof(value)))
 
-get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
+get_padding_size(packet::AbstractPacket) = 0
+
+function get_padding_size(packet::ConnectTokenPacket)
+    padding_size = SIZE_OF_PADDED_CONNECT_TOKEN - get_serialized_size_fields(packet)
+    @assert padding_size >= 0
+
+    return padding_size
+end
+
+get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet) + get_padding_size(packet)
 
 function get_serialized_size(value::PrivateConnectToken)
     connect_token = value.connect_token
@@ -508,10 +517,16 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
         server_to_client_key,
     )
 
-    size_of_connect_token_client = get_serialized_size(connect_token_client)
+    expected_padding_size = get_padding_size(connect_token_client)
 
-    padding = read(io)
-    if length(padding) != (SIZE_OF_PADDED_CONNECT_TOKEN - size_of_connect_token_client) || any(!=(0), padding)
+    for i in 1:expected_padding_size
+        x = read(io, UInt8)
+        if x != 0
+            return nothing
+        end
+    end
+
+    if !eof(io)
         return nothing
     end
 
