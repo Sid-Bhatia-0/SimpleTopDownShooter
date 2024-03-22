@@ -127,7 +127,7 @@ end
 
 const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
 
-struct ConnectToken
+struct ConnectTokenInfo
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
     create_timestamp::TYPE_OF_TIMESTAMP
@@ -182,11 +182,11 @@ struct ConnectionRequestPacket <: AbstractPacket
     encrypted_private_connect_token_data::Vector{UInt8}
 end
 
-function ConnectToken(client_id)
+function ConnectTokenInfo(client_id)
     create_timestamp = time_ns()
     expire_timestamp = create_timestamp + CONNECT_TOKEN_EXPIRE_SECONDS * 10 ^ 9
 
-    return ConnectToken(
+    return ConnectTokenInfo(
         NETCODE_VERSION_INFO,
         PROTOCOL_ID,
         create_timestamp,
@@ -414,18 +414,18 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
     return connection_request_packet
 end
 
-function ConnectTokenPacket(connect_token::ConnectToken)
+function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
     encrypted_private_connect_token_data = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     io_encrypted_private_connect_token_data = IOBuffer(encrypted_private_connect_token_data, write = true, maxsize = length(encrypted_private_connect_token_data))
 
     private_connect_token = PrivateConnectToken(
-        connect_token.client_id,
-        connect_token.timeout_seconds,
-        length(connect_token.netcode_addresses),
-        connect_token.netcode_addresses,
-        connect_token.client_to_server_key,
-        connect_token.server_to_client_key,
-        connect_token.user_data,
+        connect_token_info.client_id,
+        connect_token_info.timeout_seconds,
+        length(connect_token_info.netcode_addresses),
+        connect_token_info.netcode_addresses,
+        connect_token_info.client_to_server_key,
+        connect_token_info.server_to_client_key,
+        connect_token_info.user_data,
     )
     message = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
     io_message = IOBuffer(message, write = true, maxsize = length(message))
@@ -433,9 +433,9 @@ function ConnectTokenPacket(connect_token::ConnectToken)
     @info "PrivateConnectToken written: $(io_message_bytes_written) bytes"
 
     private_connect_token_associated_data = PrivateConnectTokenAssociatedData(
-        connect_token.netcode_version_info,
-        connect_token.protocol_id,
-        connect_token.expire_timestamp,
+        connect_token_info.netcode_version_info,
+        connect_token_info.protocol_id,
+        connect_token_info.expire_timestamp,
     )
     associated_data = zeros(UInt8, get_serialized_size(private_connect_token_associated_data))
     io_associated_data = IOBuffer(associated_data, write = true, maxsize = length(associated_data))
@@ -445,24 +445,24 @@ function ConnectTokenPacket(connect_token::ConnectToken)
     ciphertext = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     ciphertext_length_ref = Ref{UInt}()
 
-    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, message, length(message), associated_data, length(associated_data), C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
+    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, message, length(message), associated_data, length(associated_data), C_NULL, connect_token_info.nonce, SERVER_SIDE_SHARED_KEY)
     @assert encrypt_status == 0
     @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
     write(io_encrypted_private_connect_token_data, ciphertext)
 
     return ConnectTokenPacket(
-        connect_token.netcode_version_info,
-        connect_token.protocol_id,
-        connect_token.create_timestamp,
-        connect_token.expire_timestamp,
-        connect_token.nonce,
+        connect_token_info.netcode_version_info,
+        connect_token_info.protocol_id,
+        connect_token_info.create_timestamp,
+        connect_token_info.expire_timestamp,
+        connect_token_info.nonce,
         encrypted_private_connect_token_data,
-        connect_token.timeout_seconds,
-        length(connect_token.netcode_addresses),
-        connect_token.netcode_addresses,
-        connect_token.client_to_server_key,
-        connect_token.server_to_client_key,
+        connect_token_info.timeout_seconds,
+        length(connect_token_info.netcode_addresses),
+        connect_token_info.netcode_addresses,
+        connect_token_info.client_to_server_key,
+        connect_token_info.server_to_client_key,
     )
 end
 
@@ -613,10 +613,10 @@ function auth_handler(request)
                 if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
                     io = IOBuffer(zeros(UInt8, SIZE_OF_PADDED_CONNECT_TOKEN), write = true, maxsize = SIZE_OF_PADDED_CONNECT_TOKEN)
 
-                    connect_token = ConnectToken(i)
-                    @info "connect_token struct data" connect_token.netcode_version_info connect_token.protocol_id connect_token.create_timestamp connect_token.expire_timestamp connect_token.nonce connect_token.timeout_seconds connect_token.client_id connect_token.netcode_addresses connect_token.client_to_server_key connect_token.server_to_client_key connect_token.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_PADDED_CONNECT_TOKEN
+                    connect_token_info = ConnectTokenInfo(i)
+                    @info "connect_token_info struct data" connect_token_info.netcode_version_info connect_token_info.protocol_id connect_token_info.create_timestamp connect_token_info.expire_timestamp connect_token_info.nonce connect_token_info.timeout_seconds connect_token_info.client_id connect_token_info.netcode_addresses connect_token_info.client_to_server_key connect_token_info.server_to_client_key connect_token_info.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_PADDED_CONNECT_TOKEN
 
-                    connect_token_packet = ConnectTokenPacket(connect_token)
+                    connect_token_packet = ConnectTokenPacket(connect_token_info)
 
                     write(io, connect_token_packet)
 
