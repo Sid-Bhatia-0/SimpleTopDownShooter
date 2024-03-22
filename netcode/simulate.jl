@@ -590,7 +590,6 @@ function ConnectTokenPacket(connect_token::ConnectToken)
         io_encrypted_private_connect_token_data.data,
         connect_token.timeout_seconds,
         length(connect_token.netcode_addresses),
-        # convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.netcode_addresses)),
         connect_token.netcode_addresses,
         connect_token.client_to_server_key,
         connect_token.server_to_client_key,
