@@ -231,7 +231,9 @@ get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_s
 
 get_serialized_size(value::PaddedConnectToken) = SIZE_OF_PADDED_CONNECT_TOKEN
 
-get_serialized_size(packet::AbstractPacket) = sum(get_serialized_size(getfield(packet, i)) for i in 1:fieldcount(typeof(packet)))
+get_serialized_size_fields(value) = sum(get_serialized_size(getfield(value, i)) for i in 1:fieldcount(typeof(value)))
+
+get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
 function get_serialized_size(value::PrivateConnectToken)
     connect_token = value.connect_token
