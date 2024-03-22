@@ -434,6 +434,18 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
     return connection_request_packet
 end
 
+function encrypt(message, associated_data, nonce, key)
+    ciphertext = zeros(UInt8, length(message) + SIZE_OF_HMAC)
+    ciphertext_length_ref = Ref{UInt}()
+
+    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, message, length(message), associated_data, length(associated_data), C_NULL, nonce, key)
+
+    @assert encrypt_status == 0
+    @assert ciphertext_length_ref[] == length(ciphertext)
+
+    return ciphertext
+end
+
 function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
     private_connect_token = PrivateConnectToken(connect_token_info)
     message = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
@@ -447,12 +459,7 @@ function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
     io_associated_data_bytes_written = write(io_associated_data, private_connect_token_associated_data)
     @info "PrivateConnectTokenAssociatedData written: $(io_associated_data_bytes_written) bytes"
 
-    ciphertext = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
-    ciphertext_length_ref = Ref{UInt}()
-
-    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, message, length(message), associated_data, length(associated_data), C_NULL, connect_token_info.nonce, SERVER_SIDE_SHARED_KEY)
-    @assert encrypt_status == 0
-    @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
+    encrypted_private_connect_token_data = encrypt(message, associated_data, connect_token_info.nonce, SERVER_SIDE_SHARED_KEY)
 
     return ConnectTokenPacket(
         connect_token_info.netcode_version_info,
@@ -460,7 +467,7 @@ function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
         connect_token_info.create_timestamp,
         connect_token_info.expire_timestamp,
         connect_token_info.nonce,
-        ciphertext,
+        encrypted_private_connect_token_data,
         connect_token_info.timeout_seconds,
         length(connect_token_info.netcode_addresses),
         connect_token_info.netcode_addresses,
