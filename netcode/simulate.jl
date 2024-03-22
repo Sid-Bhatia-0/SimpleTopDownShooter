@@ -141,10 +141,6 @@ struct ConnectToken
     user_data::Vector{UInt8}
 end
 
-struct PaddedConnectToken
-    connect_token::ConnectToken
-end
-
 struct PrivateConnectToken
     connect_token::ConnectToken
 end
@@ -228,8 +224,6 @@ get_serialized_size(value::EncryptedPrivateConnectToken) = SIZE_OF_ENCRYPTED_PRI
 get_serialized_size(value::PaddedPrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
 
 get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_size(value.connect_token.netcode_version_info) + get_serialized_size(value.connect_token.protocol_id) + get_serialized_size(value.connect_token.expire_timestamp)
-
-get_serialized_size(value::PaddedConnectToken) = SIZE_OF_PADDED_CONNECT_TOKEN
 
 get_serialized_size_fields(value) = sum(get_serialized_size(getfield(value, i)) for i in 1:fieldcount(typeof(value)))
 
@@ -434,22 +428,6 @@ function Base.write(io::IO, connect_token::ConnectToken)
     n += write(io, connect_token.client_to_server_key)
 
     n += write(io, connect_token.server_to_client_key)
-
-    return n
-end
-
-function Base.write(io::IO, padded_connect_token::PaddedConnectToken)
-    connect_token = padded_connect_token.connect_token
-
-    n = 0
-
-    n += write(io, connect_token)
-    @assert n == get_serialized_size(connect_token)
-    @info "ConnectToken written: $(n) bytes"
-
-    for i in 1 : SIZE_OF_PADDED_CONNECT_TOKEN - n
-        n += write(io, UInt8(0))
-    end
 
     return n
 end
