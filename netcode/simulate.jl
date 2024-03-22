@@ -526,15 +526,17 @@ function Base.write(io::IO, netcode_addresses::Vector{NetcodeInetAddr})
     return n
 end
 
-function Base.write(io::IO, packet::AbstractPacket)
+function write_fields(io::IO, value)
     n = 0
 
-    for i in 1:fieldcount(typeof(packet))
-        n += write(io, getfield(packet, i))
+    for i in 1:fieldcount(typeof(value))
+        n += write(io, getfield(value, i))
     end
 
     return n
 end
+
+Base.write(io::IO, packet::AbstractPacket) = write_fields(io, packet)
 
 function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
     if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
