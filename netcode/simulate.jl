@@ -247,7 +247,7 @@ get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
 get_serialized_size(packet::ConnectTokenPacket) = SIZE_OF_PADDED_CONNECT_TOKEN
 
-get_serialized_size(value::PrivateConnectToken) = get_serialized_size_fields(value)
+get_serialized_size(::PrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
 
 get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
 get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
