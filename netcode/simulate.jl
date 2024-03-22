@@ -7,180 +7,38 @@ import Sockets
 import Sodium
 import Statistics
 
-const RNG = Random.MersenneTwister(0)
+include("protocol_constants.jl")
+include("types.jl")
 
-const NETCODE_VERSION_INFO = Vector{UInt8}("NETCODE 1.02\0")
+const NULL_NETCODE_ADDRESS = NetcodeInetAddr(Sockets.InetAddr(Sockets.IPv4(zero(TYPE_OF_IPV4_HOST)), zero(TYPE_OF_IPV4_PORT)))
 
-const SIZE_OF_NETCODE_VERSION_INFO = length(NETCODE_VERSION_INFO)
-
-const TYPE_OF_PROTOCOL_ID = UInt64
-
-const SIZE_OF_PROTOCOL_ID = sizeof(TYPE_OF_PROTOCOL_ID)
+const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
 
 const PROTOCOL_ID = parse(TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
 
-const TYPE_OF_TIMESTAMP = UInt64
+const RNG = Random.MersenneTwister(0)
 
-const SIZE_OF_TIMESTAMP = sizeof(TYPE_OF_TIMESTAMP)
+const SERVER_SIDE_SHARED_KEY = rand(RNG, UInt8, SIZE_OF_SERVER_SIDE_SHARED_KEY)
 
-const TYPE_OF_TIMEOUT_SECONDS = UInt32
-
-const SIZE_OF_TIMEOUT_SECONDS = sizeof(TYPE_OF_TIMEOUT_SECONDS)
+const ROOM_SIZE = 3
 
 const TIMEOUT_SECONDS = TYPE_OF_TIMEOUT_SECONDS(5)
 
 const CONNECT_TOKEN_EXPIRE_SECONDS = 10
 
-const TYPE_OF_CLIENT_ID = UInt64
-
-const SIZE_OF_CLIENT_ID = sizeof(TYPE_OF_CLIENT_ID)
-
-const SIZE_OF_NONCE = 24
-
-const SIZE_OF_CLIENT_TO_SERVER_KEY = 32
-
-const SIZE_OF_SERVER_TO_CLIENT_KEY = 32
-
-const SIZE_OF_SERVER_SIDE_SHARED_KEY = 32
-
-const SERVER_SIDE_SHARED_KEY = rand(RNG, UInt8, SIZE_OF_SERVER_SIDE_SHARED_KEY)
-
-const SIZE_OF_USER_DATA = 32
-
-const SIZE_OF_HMAC = 16
-
-const SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA = 1024
-
-const SIZE_OF_PADDED_CONNECT_TOKEN = 2048
-
-const ROOM_SIZE = 3
-
-const TYPE_OF_ADDRESS_TYPE = UInt8
-const SIZE_OF_ADDRESS_TYPE = sizeof(TYPE_OF_ADDRESS_TYPE)
-const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
-const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(2)
-
-const TYPE_OF_IPV4_HOST = fieldtype(Sockets.IPv4, :host)
-const SIZE_OF_IPV4_HOST = sizeof(TYPE_OF_IPV4_HOST)
-
-const TYPE_OF_IPV4_PORT = fieldtype(Sockets.InetAddr{Sockets.IPv4}, :port)
-const SIZE_OF_IPV4_PORT = sizeof(TYPE_OF_IPV4_PORT)
-
-const TYPE_OF_IPV6_HOST = fieldtype(Sockets.IPv6, :host)
-const SIZE_OF_IPV6_HOST = sizeof(TYPE_OF_IPV6_HOST)
-
-const TYPE_OF_IPV6_PORT = fieldtype(Sockets.InetAddr{Sockets.IPv6}, :port)
-const SIZE_OF_IPV6_PORT = sizeof(TYPE_OF_IPV6_PORT)
-
 const GAME_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
+
+const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDRESS]
 
-const TYPE_OF_NUM_SERVER_ADDRESSES = UInt32
-
-const SIZE_OF_NUM_SERVER_ADDRESSES = sizeof(TYPE_OF_NUM_SERVER_ADDRESSES)
-
-const MAX_GAME_SERVERS = 32
-
 @assert 1 <= length(GAME_SERVER_ADDRESSES) <= MAX_GAME_SERVERS
-
-const TYPE_OF_PACKET_TYPE = UInt8
-const PACKET_TYPE_CONNECTION_REQUEST = TYPE_OF_PACKET_TYPE(0)
-
-const SIZE_OF_CONNECTION_REQUEST_PACKET = 1078
-
-const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
 
 # TODO: salts must be randomly generated during user registration
 const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
 
 const CLIENT_USERNAME = "user1"
-
 const CLIENT_PASSWORD = "password1"
-
-struct DebugInfo
-    frame_end_time_buffer::Vector{Int}
-    frame_time_buffer::Vector{Int}
-    update_time_theoretical_buffer::Vector{Int}
-    update_time_observed_buffer::Vector{Int}
-    sleep_time_theoretical_buffer::Vector{Int}
-    sleep_time_observed_buffer::Vector{Int}
-end
-
-mutable struct GameState
-    reference_time::Int
-    frame_number::Int
-    target_frame_rate::Int
-    target_ns_per_frame::Int
-end
-
-struct NetcodeInetAddr
-    address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
-end
-
-const NULL_NETCODE_ADDRESS = NetcodeInetAddr(Sockets.InetAddr(Sockets.IPv4(zero(TYPE_OF_IPV4_HOST)), zero(TYPE_OF_IPV4_PORT)))
-
-struct ClientSlot
-    is_used::Bool
-    netcode_address::NetcodeInetAddr
-end
-
-const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
-
-struct ConnectTokenInfo
-    netcode_version_info::Vector{UInt8}
-    protocol_id::TYPE_OF_PROTOCOL_ID
-    create_timestamp::TYPE_OF_TIMESTAMP
-    expire_timestamp::TYPE_OF_TIMESTAMP
-    nonce::Vector{UInt8}
-    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
-    client_id::TYPE_OF_CLIENT_ID
-    netcode_addresses::Vector{NetcodeInetAddr}
-    client_to_server_key::Vector{UInt8}
-    server_to_client_key::Vector{UInt8}
-    user_data::Vector{UInt8}
-end
-
-struct PrivateConnectToken
-    client_id::TYPE_OF_CLIENT_ID
-    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
-    num_server_addresses::TYPE_OF_NUM_SERVER_ADDRESSES
-    netcode_addresses::Vector{NetcodeInetAddr}
-    client_to_server_key::Vector{UInt8}
-    server_to_client_key::Vector{UInt8}
-    user_data::Vector{UInt8}
-end
-
-struct PrivateConnectTokenAssociatedData
-    netcode_version_info::Vector{UInt8}
-    protocol_id::TYPE_OF_PROTOCOL_ID
-    expire_timestamp::TYPE_OF_TIMESTAMP
-end
-
-abstract type AbstractPacket end
-
-struct ConnectTokenPacket <: AbstractPacket
-    netcode_version_info::Vector{UInt8}
-    protocol_id::TYPE_OF_PROTOCOL_ID
-    create_timestamp::TYPE_OF_TIMESTAMP
-    expire_timestamp::TYPE_OF_TIMESTAMP
-    nonce::Vector{UInt8}
-    encrypted_private_connect_token_data::Vector{UInt8}
-    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
-    num_server_addresses::TYPE_OF_NUM_SERVER_ADDRESSES
-    netcode_addresses::Vector{NetcodeInetAddr}
-    client_to_server_key::Vector{UInt8}
-    server_to_client_key::Vector{UInt8}
-end
-
-struct ConnectionRequestPacket <: AbstractPacket
-    packet_type::TYPE_OF_PACKET_TYPE
-    netcode_version_info::Vector{UInt8}
-    protocol_id::TYPE_OF_PROTOCOL_ID
-    expire_timestamp::TYPE_OF_TIMESTAMP
-    nonce::Vector{UInt8}
-    encrypted_private_connect_token_data::Vector{UInt8}
-end
 
 function ConnectTokenInfo(client_id)
     create_timestamp = time_ns()
