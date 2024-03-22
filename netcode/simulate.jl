@@ -260,7 +260,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
     io = IOBuffer(data)
 
     packet_type = read(io, TYPE_OF_PACKET_TYPE)
-    if packet_type != PACKET_TYPE_CONNECTION_REQUEST
+    if packet_type != PACKET_TYPE_CONNECTION_REQUEST_PACKET
         return nothing
     end
 
@@ -405,11 +405,11 @@ function start_game_server(game_server_address, room_size)
             continue
         end
 
-        if data[1] == PACKET_TYPE_CONNECTION_REQUEST
+        if data[1] == PACKET_TYPE_CONNECTION_REQUEST_PACKET
             connection_request_packet = try_read(data, ConnectionRequestPacket)
 
             if !isnothing(connection_request_packet)
-                @info "Received PACKET_TYPE_CONNECTION_REQUEST"
+                @info "Received PACKET_TYPE_CONNECTION_REQUEST_PACKET"
 
                 for i in 1:room_size
                     if !room[i].is_used
@@ -425,7 +425,7 @@ function start_game_server(game_server_address, room_size)
                     break
                 end
             else
-                @info "Received malformed PACKET_TYPE_CONNECTION_REQUEST"
+                @info "Received malformed PACKET_TYPE_CONNECTION_REQUEST_PACKET"
             end
         else
             @info "Received unknown packet type"
@@ -452,7 +452,7 @@ function start_client(auth_server_address, username, password)
     socket = Sockets.UDPSocket()
 
     connection_request_packet = ConnectionRequestPacket(
-        PACKET_TYPE_CONNECTION_REQUEST,
+        PACKET_TYPE_CONNECTION_REQUEST_PACKET,
         connect_token_packet.netcode_version_info,
         connect_token_packet.protocol_id,
         connect_token_packet.expire_timestamp,
