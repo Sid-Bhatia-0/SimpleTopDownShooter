@@ -18,7 +18,7 @@ const PROTOCOL_ID = parse(TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(NETCOD
 
 const RNG = Random.MersenneTwister(0)
 
-const SERVER_SIDE_SHARED_KEY = rand(RNG, UInt8, SIZE_OF_SERVER_SIDE_SHARED_KEY)
+const SERVER_SIDE_SHARED_KEY = rand(RNG, UInt8, SIZE_OF_KEY)
 
 const ROOM_SIZE = 3
 
@@ -53,8 +53,8 @@ function ConnectTokenInfo(client_id)
         TIMEOUT_SECONDS,
         client_id,
         NetcodeInetAddr.(GAME_SERVER_ADDRESSES),
-        rand(UInt8, SIZE_OF_CLIENT_TO_SERVER_KEY),
-        rand(UInt8, SIZE_OF_SERVER_TO_CLIENT_KEY),
+        rand(UInt8, SIZE_OF_KEY),
+        rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
     )
 end
@@ -186,9 +186,9 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
         end
     end
 
-    client_to_server_key = read(io, SIZE_OF_CLIENT_TO_SERVER_KEY)
+    client_to_server_key = read(io, SIZE_OF_KEY)
 
-    server_to_client_key = read(io, SIZE_OF_SERVER_TO_CLIENT_KEY)
+    server_to_client_key = read(io, SIZE_OF_KEY)
 
     while !eof(io)
         x = read(io, UInt8)
