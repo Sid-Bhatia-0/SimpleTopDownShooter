@@ -435,9 +435,6 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
 end
 
 function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
-    encrypted_private_connect_token_data = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
-    io_encrypted_private_connect_token_data = IOBuffer(encrypted_private_connect_token_data, write = true, maxsize = length(encrypted_private_connect_token_data))
-
     private_connect_token = PrivateConnectToken(connect_token_info)
     message = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
     io_message = IOBuffer(message, write = true, maxsize = length(message))
@@ -457,15 +454,13 @@ function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
     @assert encrypt_status == 0
     @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
-    write(io_encrypted_private_connect_token_data, ciphertext)
-
     return ConnectTokenPacket(
         connect_token_info.netcode_version_info,
         connect_token_info.protocol_id,
         connect_token_info.create_timestamp,
         connect_token_info.expire_timestamp,
         connect_token_info.nonce,
-        encrypted_private_connect_token_data,
+        ciphertext,
         connect_token_info.timeout_seconds,
         length(connect_token_info.netcode_addresses),
         connect_token_info.netcode_addresses,
