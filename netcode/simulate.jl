@@ -298,16 +298,15 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
         connect_token.protocol_id,
         connect_token.expire_timestamp,
     )
-    size_of_private_connect_token_associated_data = get_serialized_size(private_connect_token_associated_data)
-    io_associated_data = IOBuffer(maxsize = size_of_private_connect_token_associated_data)
-    associated_data_length = write(io_associated_data, private_connect_token_associated_data)
-    @info "PrivateConnectTokenAssociatedData written: $(associated_data_length) bytes"
-    @assert associated_data_length == size_of_private_connect_token_associated_data
+    associated_data = zeros(UInt8, get_serialized_size(private_connect_token_associated_data))
+    io_associated_data = IOBuffer(associated_data, write = true, maxsize = length(associated_data))
+    io_associated_data_bytes_written = write(io_associated_data, private_connect_token_associated_data)
+    @info "PrivateConnectTokenAssociatedData written: $(io_associated_data_bytes_written) bytes"
 
     ciphertext = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     ciphertext_length_ref = Ref{UInt}()
 
-    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, message, length(message), io_associated_data.data, associated_data_length, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
+    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, message, length(message), associated_data, length(associated_data), C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
     @assert encrypt_status == 0
     @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
