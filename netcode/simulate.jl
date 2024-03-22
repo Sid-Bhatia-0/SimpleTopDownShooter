@@ -254,34 +254,6 @@ function get_serialized_size(value::PrivateConnectToken)
     return n
 end
 
-function get_serialized_size(connect_token::ConnectToken)
-    n = 0
-
-    n += get_serialized_size(connect_token.netcode_version_info)
-
-    n += get_serialized_size(connect_token.protocol_id)
-
-    n += get_serialized_size(connect_token.create_timestamp)
-
-    n += get_serialized_size(connect_token.expire_timestamp)
-
-    n += get_serialized_size(connect_token.nonce)
-
-    n += get_serialized_size(EncryptedPrivateConnectToken(connect_token))
-
-    n += get_serialized_size(connect_token.timeout_seconds)
-
-    n += get_serialized_size(zero(TYPE_OF_NUM_SERVER_ADDRESSES))
-
-    n += sum(get_serialized_size, connect_token.netcode_addresses)
-
-    n += get_serialized_size(connect_token.client_to_server_key)
-
-    n += get_serialized_size(connect_token.server_to_client_key)
-
-    return n
-end
-
 get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
 get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
 get_address_type(netcode_inetaddr::NetcodeInetAddr) = get_address_type(netcode_inetaddr.address)
@@ -374,36 +346,6 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
     @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
     n = write(io, ciphertext)
-
-    return n
-end
-
-function Base.write(io::IO, connect_token::ConnectToken)
-    n = 0
-
-    n += write(io, connect_token.netcode_version_info)
-
-    n += write(io, connect_token.protocol_id)
-
-    n += write(io, connect_token.create_timestamp)
-
-    n += write(io, connect_token.expire_timestamp)
-
-    n += write(io, connect_token.nonce)
-
-    n += write(io, EncryptedPrivateConnectToken(connect_token))
-
-    n += write(io, connect_token.timeout_seconds)
-
-    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.netcode_addresses)))
-
-    for netcode_address in connect_token.netcode_addresses
-        n += write(io, netcode_address)
-    end
-
-    n += write(io, connect_token.client_to_server_key)
-
-    n += write(io, connect_token.server_to_client_key)
 
     return n
 end
