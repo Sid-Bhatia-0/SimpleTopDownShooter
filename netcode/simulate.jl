@@ -245,7 +245,7 @@ get_serialized_size_fields(value) = sum(get_serialized_size(getfield(value, i)) 
 
 get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
-get_serialized_size(packet::ConnectTokenPacket) = SIZE_OF_PADDED_CONNECT_TOKEN
+get_serialized_size(::ConnectTokenPacket) = SIZE_OF_PADDED_CONNECT_TOKEN
 
 get_serialized_size(::PrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
 
