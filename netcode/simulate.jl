@@ -145,10 +145,6 @@ struct PrivateConnectToken
     connect_token::ConnectToken
 end
 
-struct PaddedPrivateConnectToken
-    connect_token::ConnectToken
-end
-
 struct PrivateConnectTokenAssociatedData
     connect_token::ConnectToken
 end
@@ -220,8 +216,6 @@ get_serialized_size(value::NetcodeInetAddr) = SIZE_OF_ADDRESS_TYPE + get_seriali
 get_serialized_size(value::Vector{NetcodeInetAddr}) = sum(get_serialized_size, value)
 
 get_serialized_size(value::EncryptedPrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
-
-get_serialized_size(value::PaddedPrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
 
 get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_size(value.connect_token.netcode_version_info) + get_serialized_size(value.connect_token.protocol_id) + get_serialized_size(value.connect_token.expire_timestamp)
 
@@ -342,23 +336,6 @@ function Base.write(io::IO, private_connect_token::PrivateConnectToken)
     return n
 end
 
-function Base.write(io::IO, padded_private_connect_token::PaddedPrivateConnectToken)
-    connect_token = padded_private_connect_token.connect_token
-
-    n = 0
-
-    private_connect_token = PrivateConnectToken(connect_token)
-    n += write(io, private_connect_token)
-    @assert n == get_serialized_size(private_connect_token)
-    @info "PrivateConnectToken written: $(n) bytes"
-
-    for i in 1 : SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC - n
-        n += write(io, UInt8(0))
-    end
-
-    return n
-end
-
 function Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData)
     connect_token = private_connect_token_associated_data.connect_token
 
@@ -376,12 +353,11 @@ end
 function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateConnectToken)
     connect_token = encrypted_private_connect_token.connect_token
 
-    padded_private_connect_token = PaddedPrivateConnectToken(connect_token)
-    size_of_padded_private_connect_token = get_serialized_size(padded_private_connect_token)
-    io_message = IOBuffer(maxsize = size_of_padded_private_connect_token)
-    message_length = write(io_message, padded_private_connect_token)
-    @info "PaddedPrivateConnectToken written: $(message_length) bytes"
-    @assert message_length == size_of_padded_private_connect_token
+    private_connect_token = PrivateConnectToken(connect_token)
+    message = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
+    io_message = IOBuffer(message, write = true, maxsize = length(message))
+    io_message_bytes_written = write(io_message, private_connect_token)
+    @info "PrivateConnectToken written: $(io_message_bytes_written) bytes"
 
     private_connect_token_associated_data = PrivateConnectTokenAssociatedData(connect_token)
     size_of_private_connect_token_associated_data = get_serialized_size(private_connect_token_associated_data)
@@ -393,7 +369,7 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
     ciphertext = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     ciphertext_length_ref = Ref{UInt}()
 
-    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, io_message.data, message_length, io_associated_data.data, associated_data_length, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
+    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, message, length(message), io_associated_data.data, associated_data_length, C_NULL, connect_token.nonce, SERVER_SIDE_SHARED_KEY)
     @assert encrypt_status == 0
     @assert ciphertext_length_ref[] == SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
