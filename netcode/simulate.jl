@@ -201,6 +201,26 @@ function ConnectTokenInfo(client_id)
     )
 end
 
+function PrivateConnectToken(connect_token_info::ConnectTokenInfo)
+    return PrivateConnectToken(
+        connect_token_info.client_id,
+        connect_token_info.timeout_seconds,
+        length(connect_token_info.netcode_addresses),
+        connect_token_info.netcode_addresses,
+        connect_token_info.client_to_server_key,
+        connect_token_info.server_to_client_key,
+        connect_token_info.user_data,
+    )
+end
+
+function PrivateConnectTokenAssociatedData(connect_token_info::ConnectTokenInfo)
+    return PrivateConnectTokenAssociatedData(
+        connect_token_info.netcode_version_info,
+        connect_token_info.protocol_id,
+        connect_token_info.expire_timestamp,
+    )
+end
+
 function get_serialized_size(value::Integer)
     if !isbits(value)
         error("Currently only isbits Integer values are supported for serialization")
@@ -418,25 +438,13 @@ function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
     encrypted_private_connect_token_data = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
     io_encrypted_private_connect_token_data = IOBuffer(encrypted_private_connect_token_data, write = true, maxsize = length(encrypted_private_connect_token_data))
 
-    private_connect_token = PrivateConnectToken(
-        connect_token_info.client_id,
-        connect_token_info.timeout_seconds,
-        length(connect_token_info.netcode_addresses),
-        connect_token_info.netcode_addresses,
-        connect_token_info.client_to_server_key,
-        connect_token_info.server_to_client_key,
-        connect_token_info.user_data,
-    )
+    private_connect_token = PrivateConnectToken(connect_token_info)
     message = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
     io_message = IOBuffer(message, write = true, maxsize = length(message))
     io_message_bytes_written = write(io_message, private_connect_token)
     @info "PrivateConnectToken written: $(io_message_bytes_written) bytes"
 
-    private_connect_token_associated_data = PrivateConnectTokenAssociatedData(
-        connect_token_info.netcode_version_info,
-        connect_token_info.protocol_id,
-        connect_token_info.expire_timestamp,
-    )
+    private_connect_token_associated_data = PrivateConnectTokenAssociatedData(connect_token_info)
     associated_data = zeros(UInt8, get_serialized_size(private_connect_token_associated_data))
     io_associated_data = IOBuffer(associated_data, write = true, maxsize = length(associated_data))
     io_associated_data_bytes_written = write(io_associated_data, private_connect_token_associated_data)
