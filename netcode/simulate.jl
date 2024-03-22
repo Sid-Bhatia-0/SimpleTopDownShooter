@@ -152,7 +152,9 @@ struct PrivateConnectToken
 end
 
 struct PrivateConnectTokenAssociatedData
-    connect_token::ConnectToken
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    expire_timestamp::TYPE_OF_TIMESTAMP
 end
 
 struct EncryptedPrivateConnectToken
@@ -223,7 +225,7 @@ get_serialized_size(value::Vector{NetcodeInetAddr}) = sum(get_serialized_size, v
 
 get_serialized_size(value::EncryptedPrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA
 
-get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_size(value.connect_token.netcode_version_info) + get_serialized_size(value.connect_token.protocol_id) + get_serialized_size(value.connect_token.expire_timestamp)
+get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_size_fields(value)
 
 get_serialized_size_fields(value) = sum(get_serialized_size(getfield(value, i)) for i in 1:fieldcount(typeof(value)))
 
@@ -272,19 +274,7 @@ end
 
 Base.write(io::IO, private_connect_token::PrivateConnectToken) = write_fields(io, private_connect_token)
 
-function Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData)
-    connect_token = private_connect_token_associated_data.connect_token
-
-    n = 0
-
-    n += write(io, connect_token.netcode_version_info)
-
-    n += write(io, connect_token.protocol_id)
-
-    n += write(io, connect_token.expire_timestamp)
-
-    return n
-end
+Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData) = write_fields(io, private_connect_token_associated_data)
 
 function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateConnectToken)
     connect_token = encrypted_private_connect_token.connect_token
@@ -303,7 +293,11 @@ function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateCon
     io_message_bytes_written = write(io_message, private_connect_token)
     @info "PrivateConnectToken written: $(io_message_bytes_written) bytes"
 
-    private_connect_token_associated_data = PrivateConnectTokenAssociatedData(connect_token)
+    private_connect_token_associated_data = PrivateConnectTokenAssociatedData(
+        connect_token.netcode_version_info,
+        connect_token.protocol_id,
+        connect_token.expire_timestamp,
+    )
     size_of_private_connect_token_associated_data = get_serialized_size(private_connect_token_associated_data)
     io_associated_data = IOBuffer(maxsize = size_of_private_connect_token_associated_data)
     associated_data_length = write(io_associated_data, private_connect_token_associated_data)
