@@ -142,7 +142,13 @@ struct ConnectToken
 end
 
 struct PrivateConnectToken
-    connect_token::ConnectToken
+    client_id::TYPE_OF_CLIENT_ID
+    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
+    num_server_addresses::TYPE_OF_NUM_SERVER_ADDRESSES
+    netcode_addresses::Vector{NetcodeInetAddr}
+    client_to_server_key::Vector{UInt8}
+    server_to_client_key::Vector{UInt8}
+    user_data::Vector{UInt8}
 end
 
 struct PrivateConnectTokenAssociatedData
@@ -232,27 +238,7 @@ end
 
 get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet) + get_padding_size(packet)
 
-function get_serialized_size(value::PrivateConnectToken)
-    connect_token = value.connect_token
-
-    n = 0
-
-    n += get_serialized_size(connect_token.client_id)
-
-    n += get_serialized_size(connect_token.timeout_seconds)
-
-    n += get_serialized_size(zero(TYPE_OF_NUM_SERVER_ADDRESSES))
-
-    n += sum(get_serialized_size, connect_token.netcode_addresses)
-
-    n += get_serialized_size(connect_token.client_to_server_key)
-
-    n += get_serialized_size(connect_token.server_to_client_key)
-
-    n += get_serialized_size(connect_token.user_data)
-
-    return n
-end
+get_serialized_size(value::PrivateConnectToken) = get_serialized_size_fields(value)
 
 get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
 get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
@@ -284,29 +270,7 @@ function try_read(io::IO, ::Type{NetcodeInetAddr})
     return NetcodeInetAddr(Sockets.InetAddr(host, port))
 end
 
-function Base.write(io::IO, private_connect_token::PrivateConnectToken)
-    connect_token = private_connect_token.connect_token
-
-    n = 0
-
-    n += write(io, connect_token.client_id)
-
-    n += write(io, connect_token.timeout_seconds)
-
-    n += write(io, convert(TYPE_OF_NUM_SERVER_ADDRESSES, length(connect_token.netcode_addresses)))
-
-    for netcode_address in connect_token.netcode_addresses
-        n += write(io, netcode_address)
-    end
-
-    n += write(io, connect_token.client_to_server_key)
-
-    n += write(io, connect_token.server_to_client_key)
-
-    n += write(io, connect_token.user_data)
-
-    return n
-end
+Base.write(io::IO, private_connect_token::PrivateConnectToken) = write_fields(io, private_connect_token)
 
 function Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData)
     connect_token = private_connect_token_associated_data.connect_token
@@ -325,7 +289,15 @@ end
 function Base.write(io::IO, encrypted_private_connect_token::EncryptedPrivateConnectToken)
     connect_token = encrypted_private_connect_token.connect_token
 
-    private_connect_token = PrivateConnectToken(connect_token)
+    private_connect_token = PrivateConnectToken(
+        connect_token.client_id,
+        connect_token.timeout_seconds,
+        length(connect_token.netcode_addresses),
+        connect_token.netcode_addresses,
+        connect_token.client_to_server_key,
+        connect_token.server_to_client_key,
+        connect_token.user_data,
+    )
     message = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
     io_message = IOBuffer(message, write = true, maxsize = length(message))
     io_message_bytes_written = write(io_message, private_connect_token)
