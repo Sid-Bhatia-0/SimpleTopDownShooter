@@ -279,7 +279,7 @@ function try_read(io::IO, ::Type{NetcodeInetAddr})
     return NetcodeInetAddr(Sockets.InetAddr(host, port))
 end
 
-Base.write(io::IO, private_connect_token::PrivateConnectToken) = write_fields(io, private_connect_token)
+Base.write(io::IO, private_connect_token::PrivateConnectToken) = write_fields_and_padding(io, private_connect_token)
 
 Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData) = write_fields(io, private_connect_token_associated_data)
 
@@ -376,7 +376,23 @@ function write_fields(io::IO, value)
     return n
 end
 
+function write_fields_and_padding(io::IO, value)
+    n = write_fields(io, value)
+
+    serialized_size = get_serialized_size(value)
+
+    padding_size = serialized_size - n
+
+    for i in 1 : padding_size
+        n += write(io, UInt8(0))
+    end
+
+    return n
+end
+
 Base.write(io::IO, packet::AbstractPacket) = write_fields(io, packet)
+
+Base.write(io::IO, packet::ConnectTokenPacket) = write_fields_and_padding(io, packet)
 
 function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
     if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
@@ -421,6 +437,18 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
     return connection_request_packet
 end
 
+function get_serialized_data(value)
+    data = zeros(UInt8, get_serialized_size(value))
+
+    io = IOBuffer(data, write = true, maxsize = length(data))
+
+    num_bytes_written = write(io, value)
+
+    @assert num_bytes_written == length(data) "$(num_bytes_written), $(length(data))"
+
+    return data
+end
+
 function encrypt(message, associated_data, nonce, key)
     ciphertext = zeros(UInt8, length(message) + SIZE_OF_HMAC)
     ciphertext_length_ref = Ref{UInt}()
@@ -434,17 +462,9 @@ function encrypt(message, associated_data, nonce, key)
 end
 
 function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
-    private_connect_token = PrivateConnectToken(connect_token_info)
-    message = zeros(UInt8, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC)
-    io_message = IOBuffer(message, write = true, maxsize = length(message))
-    io_message_bytes_written = write(io_message, private_connect_token)
-    @info "PrivateConnectToken written: $(io_message_bytes_written) bytes"
+    message = get_serialized_data(PrivateConnectToken(connect_token_info))
 
-    private_connect_token_associated_data = PrivateConnectTokenAssociatedData(connect_token_info)
-    associated_data = zeros(UInt8, get_serialized_size(private_connect_token_associated_data))
-    io_associated_data = IOBuffer(associated_data, write = true, maxsize = length(associated_data))
-    io_associated_data_bytes_written = write(io_associated_data, private_connect_token_associated_data)
-    @info "PrivateConnectTokenAssociatedData written: $(io_associated_data_bytes_written) bytes"
+    associated_data = get_serialized_data(PrivateConnectTokenAssociatedData(connect_token_info))
 
     encrypted_private_connect_token_data = encrypt(message, associated_data, connect_token_info.nonce, SERVER_SIDE_SHARED_KEY)
 
@@ -608,16 +628,14 @@ function auth_handler(request)
                 return HTTP.Response(400, "ERROR: Invalid credentials")
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
-                    io = IOBuffer(zeros(UInt8, SIZE_OF_PADDED_CONNECT_TOKEN), write = true, maxsize = SIZE_OF_PADDED_CONNECT_TOKEN)
-
                     connect_token_info = ConnectTokenInfo(i)
                     @info "connect_token_info struct data" connect_token_info.netcode_version_info connect_token_info.protocol_id connect_token_info.create_timestamp connect_token_info.expire_timestamp connect_token_info.nonce connect_token_info.timeout_seconds connect_token_info.client_id connect_token_info.netcode_addresses connect_token_info.client_to_server_key connect_token_info.server_to_client_key connect_token_info.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_PADDED_CONNECT_TOKEN
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
 
-                    write(io, connect_token_packet)
+                    data = get_serialized_data(connect_token_packet)
 
-                    return HTTP.Response(200, io.data)
+                    return HTTP.Response(200, data)
                 else
                     return HTTP.Response(400, "ERROR: Invalid credentials")
                 end
