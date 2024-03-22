@@ -33,7 +33,7 @@ const TYPE_OF_IPV6_HOST = fieldtype(Sockets.IPv6, :host)
 const TYPE_OF_IPV6_PORT = fieldtype(Sockets.InetAddr{Sockets.IPv6}, :port)
 
 const TYPE_OF_NUM_SERVER_ADDRESSES = UInt32
-const MAX_GAME_SERVERS = 32
+const MAX_NUM_SERVER_ADDRESSES = 32
 
 const TYPE_OF_PACKET_TYPE = UInt8
 

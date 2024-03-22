@@ -32,7 +32,7 @@ const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
 
 const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDRESS]
 
-@assert 1 <= length(GAME_SERVER_ADDRESSES) <= MAX_GAME_SERVERS
+@assert 1 <= length(GAME_SERVER_ADDRESSES) <= MAX_NUM_SERVER_ADDRESSES
 
 # TODO: salts must be randomly generated during user registration
 const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
@@ -171,7 +171,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
     timeout_seconds = read(io, TYPE_OF_TIMEOUT_SECONDS)
 
     num_server_addresses = read(io, TYPE_OF_NUM_SERVER_ADDRESSES)
-    if !(1 <= num_server_addresses <= MAX_GAME_SERVERS)
+    if !(1 <= num_server_addresses <= MAX_NUM_SERVER_ADDRESSES)
         return nothing
     end
 
