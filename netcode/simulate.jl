@@ -103,7 +103,7 @@ get_serialized_size_fields(value) = sum(get_serialized_size(getfield(value, i)) 
 
 get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
-get_serialized_size(::ConnectTokenPacket) = SIZE_OF_PADDED_CONNECT_TOKEN
+get_serialized_size(::ConnectTokenPacket) = SIZE_OF_CONNECT_TOKEN_PACKET
 
 get_serialized_size(::PrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA - SIZE_OF_HMAC
 
@@ -142,7 +142,7 @@ Base.write(io::IO, private_connect_token::PrivateConnectToken) = write_fields_an
 Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData) = write_fields(io, private_connect_token_associated_data)
 
 function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
-    if length(data) != SIZE_OF_PADDED_CONNECT_TOKEN
+    if length(data) != SIZE_OF_CONNECT_TOKEN_PACKET
         return nothing
     end
 
@@ -487,7 +487,7 @@ function auth_handler(request)
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
                     connect_token_info = ConnectTokenInfo(i)
-                    @info "connect_token_info struct data" connect_token_info.netcode_version_info connect_token_info.protocol_id connect_token_info.create_timestamp connect_token_info.expire_timestamp connect_token_info.nonce connect_token_info.timeout_seconds connect_token_info.client_id connect_token_info.netcode_addresses connect_token_info.client_to_server_key connect_token_info.server_to_client_key connect_token_info.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_PADDED_CONNECT_TOKEN
+                    @info "connect_token_info struct data" connect_token_info.netcode_version_info connect_token_info.protocol_id connect_token_info.create_timestamp connect_token_info.expire_timestamp connect_token_info.nonce connect_token_info.timeout_seconds connect_token_info.client_id connect_token_info.netcode_addresses connect_token_info.client_to_server_key connect_token_info.server_to_client_key connect_token_info.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN_PACKET
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
 
