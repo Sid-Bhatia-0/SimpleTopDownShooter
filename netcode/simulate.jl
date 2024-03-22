@@ -339,7 +339,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
 
     server_to_client_key = read(io, SIZE_OF_SERVER_TO_CLIENT_KEY)
 
-    connect_token_client = ConnectTokenPacket(
+    connect_token_packet = ConnectTokenPacket(
         netcode_version_info,
         protocol_id,
         create_timestamp,
@@ -353,7 +353,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
         server_to_client_key,
     )
 
-    expected_padding_size = get_padding_size(connect_token_client)
+    expected_padding_size = get_padding_size(connect_token_packet)
 
     for i in 1:expected_padding_size
         x = read(io, UInt8)
@@ -366,7 +366,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
         return nothing
     end
 
-    return connect_token_client
+    return connect_token_packet
 end
 
 function Base.write(io::IO, netcode_addresses::Vector{NetcodeInetAddr})
@@ -575,12 +575,12 @@ function start_client(auth_server_address, username, password)
 
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port))
 
-    connect_token_client = try_read(copy(response.body), ConnectTokenPacket)
-    if isnothing(connect_token_client)
+    connect_token_packet = try_read(copy(response.body), ConnectTokenPacket)
+    if isnothing(connect_token_packet)
         error("Invalid connect token packet received")
     end
 
-    game_server_address = first(connect_token_client.netcode_addresses).address
+    game_server_address = first(connect_token_packet.netcode_addresses).address
 
     @info "Client obtained game_server_address" game_server_address
 
@@ -588,11 +588,11 @@ function start_client(auth_server_address, username, password)
 
     connection_request_packet = ConnectionRequestPacket(
         PACKET_TYPE_CONNECTION_REQUEST,
-        connect_token_client.netcode_version_info,
-        connect_token_client.protocol_id,
-        connect_token_client.expire_timestamp,
-        connect_token_client.nonce,
-        connect_token_client.encrypted_private_connect_token_data,
+        connect_token_packet.netcode_version_info,
+        connect_token_packet.protocol_id,
+        connect_token_packet.expire_timestamp,
+        connect_token_packet.nonce,
+        connect_token_packet.encrypted_private_connect_token_data,
     )
     size_of_connection_request_packet = get_serialized_size(connection_request_packet)
     io_connection_request_packet = IOBuffer(maxsize = size_of_connection_request_packet)
