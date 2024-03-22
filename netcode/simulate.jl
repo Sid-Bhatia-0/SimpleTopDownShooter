@@ -11,7 +11,7 @@ include("protocol_constants.jl")
 include("types.jl")
 include("serialization.jl")
 
-const NULL_NETCODE_ADDRESS = NetcodeInetAddr(Sockets.InetAddr(Sockets.IPv4(zero(TYPE_OF_IPV4_HOST)), zero(TYPE_OF_IPV4_PORT)))
+const NULL_NETCODE_ADDRESS = NetcodeAddress(Sockets.InetAddr(Sockets.IPv4(zero(TYPE_OF_IPV4_HOST)), zero(TYPE_OF_IPV4_PORT)))
 
 const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
 
@@ -113,7 +113,7 @@ function start_game_server(game_server_address, room_size)
 
                 for i in 1:room_size
                     if !room[i].is_used
-                        client_slot = ClientSlot(true, NetcodeInetAddr(client_address))
+                        client_slot = ClientSlot(true, NetcodeAddress(client_address))
                         room[i] = client_slot
                         @info "Client accepted" client_address
                         break

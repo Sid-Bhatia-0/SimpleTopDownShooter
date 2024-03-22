@@ -12,9 +12,9 @@ get_serialized_size(value::Union{Sockets.IPv4, Sockets.IPv6}) = get_serialized_s
 
 get_serialized_size(value::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}) = get_serialized_size(value.host) + sizeof(value.port)
 
-get_serialized_size(value::NetcodeInetAddr) = SIZE_OF_ADDRESS_TYPE + get_serialized_size(value.address)
+get_serialized_size(value::NetcodeAddress) = SIZE_OF_ADDRESS_TYPE + get_serialized_size(value.address)
 
-get_serialized_size(value::Vector{NetcodeInetAddr}) = sum(get_serialized_size, value)
+get_serialized_size(value::Vector{NetcodeAddress}) = sum(get_serialized_size, value)
 
 get_serialized_size_fields(value) = sum(get_serialized_size(getfield(value, i)) for i in 1:fieldcount(typeof(value)))
 
@@ -38,7 +38,7 @@ function get_serialized_data(value)
     return data
 end
 
-function Base.write(io::IO, netcode_inetaddr::NetcodeInetAddr)
+function Base.write(io::IO, netcode_inetaddr::NetcodeAddress)
     n = 0
 
     n += write(io, get_address_type(netcode_inetaddr))
@@ -48,7 +48,7 @@ function Base.write(io::IO, netcode_inetaddr::NetcodeInetAddr)
     return n
 end
 
-function Base.write(io::IO, netcode_addresses::Vector{NetcodeInetAddr})
+function Base.write(io::IO, netcode_addresses::Vector{NetcodeAddress})
     n = 0
 
     for netcode_address in netcode_addresses
@@ -90,7 +90,7 @@ Base.write(io::IO, packet::AbstractPacket) = write_fields(io, packet)
 
 Base.write(io::IO, packet::ConnectTokenPacket) = write_fields_and_padding(io, packet)
 
-function try_read(io::IO, ::Type{NetcodeInetAddr})
+function try_read(io::IO, ::Type{NetcodeAddress})
     address_type = read(io, TYPE_OF_ADDRESS_TYPE)
 
     if address_type == ADDRESS_TYPE_IPV4
@@ -103,7 +103,7 @@ function try_read(io::IO, ::Type{NetcodeInetAddr})
         return nothing
     end
 
-    return NetcodeInetAddr(Sockets.InetAddr(host, port))
+    return NetcodeAddress(Sockets.InetAddr(host, port))
 end
 
 function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
@@ -140,10 +140,10 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
         return nothing
     end
 
-    netcode_addresses = NetcodeInetAddr[]
+    netcode_addresses = NetcodeAddress[]
 
     for i in 1:num_server_addresses
-        netcode_address = try_read(io, NetcodeInetAddr)
+        netcode_address = try_read(io, NetcodeAddress)
         if !isnothing(netcode_address)
             push!(netcode_addresses, netcode_address)
         else

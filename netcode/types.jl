@@ -16,13 +16,13 @@ mutable struct GameState
     target_ns_per_frame::Int
 end
 
-struct NetcodeInetAddr
+struct NetcodeAddress
     address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
 end
 
 struct ClientSlot
     is_used::Bool
-    netcode_address::NetcodeInetAddr
+    netcode_address::NetcodeAddress
 end
 
 struct ConnectTokenInfo
@@ -33,7 +33,7 @@ struct ConnectTokenInfo
     nonce::Vector{UInt8}
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     client_id::TYPE_OF_CLIENT_ID
-    netcode_addresses::Vector{NetcodeInetAddr}
+    netcode_addresses::Vector{NetcodeAddress}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
@@ -43,7 +43,7 @@ struct PrivateConnectToken
     client_id::TYPE_OF_CLIENT_ID
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     num_server_addresses::TYPE_OF_NUM_SERVER_ADDRESSES
-    netcode_addresses::Vector{NetcodeInetAddr}
+    netcode_addresses::Vector{NetcodeAddress}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
@@ -66,7 +66,7 @@ struct ConnectTokenPacket <: AbstractPacket
     encrypted_private_connect_token_data::Vector{UInt8}
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     num_server_addresses::TYPE_OF_NUM_SERVER_ADDRESSES
-    netcode_addresses::Vector{NetcodeInetAddr}
+    netcode_addresses::Vector{NetcodeAddress}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
 end
@@ -92,7 +92,7 @@ function ConnectTokenInfo(client_id)
         rand(UInt8, SIZE_OF_NONCE),
         TIMEOUT_SECONDS,
         client_id,
-        NetcodeInetAddr.(GAME_SERVER_ADDRESSES),
+        NetcodeAddress.(GAME_SERVER_ADDRESSES),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
@@ -121,7 +121,7 @@ end
 
 get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
 get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
-get_address_type(netcode_inetaddr::NetcodeInetAddr) = get_address_type(netcode_inetaddr.address)
+get_address_type(netcode_inetaddr::NetcodeAddress) = get_address_type(netcode_inetaddr.address)
 
 function encrypt(message, associated_data, nonce, key)
     ciphertext = zeros(UInt8, length(message) + SIZE_OF_HMAC)
