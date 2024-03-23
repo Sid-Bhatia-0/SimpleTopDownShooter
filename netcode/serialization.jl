@@ -182,7 +182,7 @@ function try_read(io::IO, ::Type{ConnectTokenPacket})
         end
     end
 
-    connect_token_packet = ConnectTokenPacket(
+    return ConnectTokenPacket(
         netcode_version_info,
         protocol_id,
         create_timestamp,
@@ -195,8 +195,6 @@ function try_read(io::IO, ::Type{ConnectTokenPacket})
         client_to_server_key,
         server_to_client_key,
     )
-
-    return connect_token_packet
 end
 
 function try_read(io::IO, ::Type{ConnectionRequestPacket})
@@ -224,7 +222,7 @@ function try_read(io::IO, ::Type{ConnectionRequestPacket})
 
     encrypted_private_connect_token_data = read(io, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
 
-    connection_request_packet = ConnectionRequestPacket(
+    return ConnectionRequestPacket(
         packet_type,
         netcode_version_info,
         protocol_id,
@@ -232,6 +230,4 @@ function try_read(io::IO, ::Type{ConnectionRequestPacket})
         nonce,
         encrypted_private_connect_token_data,
     )
-
-    return connection_request_packet
 end
