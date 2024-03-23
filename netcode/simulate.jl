@@ -28,11 +28,11 @@ const TIMEOUT_SECONDS = TYPE_OF_TIMEOUT_SECONDS(5)
 
 const CONNECT_TOKEN_EXPIRE_SECONDS = 10
 
-const APP_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
-
 const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
 
-const APP_SERVER_ADDRESSES = [APP_SERVER_ADDRESS]
+const APP_SERVER_ADDRESSES = [Sockets.InetAddr(Sockets.localhost, 10001)]
+
+const APP_SERVER_ADDRESS = APP_SERVER_ADDRESSES[1]
 
 @assert 1 <= length(APP_SERVER_ADDRESSES) <= MAX_NUM_SERVER_ADDRESSES
 
