@@ -11,7 +11,7 @@ include("protocol_constants.jl")
 include("types.jl")
 include("serialization.jl")
 
-const NULL_NETCODE_ADDRESS = NetcodeAddress(Sockets.InetAddr(Sockets.IPv4(zero(TYPE_OF_IPV4_HOST)), zero(TYPE_OF_IPV4_PORT)))
+const NULL_NETCODE_ADDRESS = NetcodeAddress(0, 0, 0, 0)
 
 const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
 
@@ -145,7 +145,7 @@ function start_client(auth_server_address, username, password)
         error("Invalid connect token packet received")
     end
 
-    game_server_address = first(connect_token_packet.netcode_addresses).address
+    game_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
 
     @info "Client obtained game_server_address" game_server_address
 

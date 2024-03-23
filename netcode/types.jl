@@ -17,7 +17,10 @@ mutable struct GameState
 end
 
 struct NetcodeAddress
-    address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
+    address_type::TYPE_OF_ADDRESS_TYPE
+    host_ipv4::TYPE_OF_IPV4_HOST
+    host_ipv6::TYPE_OF_IPV6_HOST
+    port::TYPE_OF_PORT
 end
 
 struct ClientSlot
@@ -80,6 +83,36 @@ struct ConnectionRequestPacket <: AbstractPacket
     encrypted_private_connect_token_data::Vector{UInt8}
 end
 
+function NetcodeAddress(address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}})
+    if address isa Sockets.InetAddr{Sockets.IPv4}
+        address_type = ADDRESS_TYPE_IPV4
+        host_ipv4 = address.host.host
+        host_ipv6 = zero(TYPE_OF_IPV6_HOST)
+    else
+        address_type = ADDRESS_TYPE_IPV6
+        host_ipv4 = zero(TYPE_OF_IPV4_HOST)
+        host_ipv6 = address.host.host
+    end
+
+    port = address.port
+
+    return NetcodeAddress(address_type, host_ipv4, host_ipv6, port)
+end
+
+is_valid(netcode_address::NetcodeAddress) = netcode_address.address_type == ADDRESS_TYPE_IPV4 || netcode_address.address_type == ADDRESS_TYPE_IPV6
+
+function get_inetaddr(netcode_address::NetcodeAddress)
+    @assert is_valid(netcode_address)
+
+    if netcode_address.address_type == ADDRESS_TYPE_IPV4
+        host = Sockets.IPv4(netcode_address.host_ipv4)
+    else
+        host = Sockets.IPv6(netcode_address.host_ipv6)
+    end
+
+    return Sockets.InetAddr(host, netcode_address.port)
+end
+
 function ConnectTokenInfo(client_id)
     create_timestamp = time_ns()
     expire_timestamp = create_timestamp + CONNECT_TOKEN_EXPIRE_SECONDS * 10 ^ 9
@@ -118,10 +151,6 @@ function PrivateConnectTokenAssociatedData(connect_token_info::ConnectTokenInfo)
         connect_token_info.expire_timestamp,
     )
 end
-
-get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
-get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
-get_address_type(netcode_inetaddr::NetcodeAddress) = get_address_type(netcode_inetaddr.address)
 
 function encrypt(message, associated_data, nonce, key)
     ciphertext = zeros(UInt8, length(message) + SIZE_OF_HMAC)

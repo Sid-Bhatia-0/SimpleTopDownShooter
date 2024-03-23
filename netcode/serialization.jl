@@ -12,7 +12,23 @@ get_serialized_size(value::Union{Sockets.IPv4, Sockets.IPv6}) = get_serialized_s
 
 get_serialized_size(value::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}) = get_serialized_size(value.host) + sizeof(value.port)
 
-get_serialized_size(value::NetcodeAddress) = SIZE_OF_ADDRESS_TYPE + get_serialized_size(value.address)
+function get_serialized_size(netcode_address::NetcodeAddress)
+    @assert is_valid(netcode_address)
+
+    n = 0
+
+    n += get_serialized_size(netcode_address.address_type)
+
+    if netcode_address.address_type == ADDRESS_TYPE_IPV4
+        n += get_serialized_size(netcode_address.host_ipv4)
+    else
+        n += get_serialized_size(netcode_address.host_ipv6)
+    end
+
+    n += get_serialized_size(netcode_address.port)
+
+    return n
+end
 
 get_serialized_size(value::Vector{NetcodeAddress}) = sum(get_serialized_size, value)
 
@@ -38,12 +54,20 @@ function get_serialized_data(value)
     return data
 end
 
-function Base.write(io::IO, netcode_inetaddr::NetcodeAddress)
+function Base.write(io::IO, netcode_address::NetcodeAddress)
+    @assert is_valid(netcode_address)
+
     n = 0
 
-    n += write(io, get_address_type(netcode_inetaddr))
-    n += write(io, netcode_inetaddr.address.host.host)
-    n += write(io, netcode_inetaddr.address.port)
+    n += write(io, netcode_address.address_type)
+
+    if netcode_address.address_type == ADDRESS_TYPE_IPV4
+        n += write(io, netcode_address.host_ipv4)
+    else
+        n += write(io, netcode_address.host_ipv6)
+    end
+
+    n += write(io, netcode_address.port)
 
     return n
 end
@@ -94,16 +118,18 @@ function try_read(io::IO, ::Type{NetcodeAddress})
     address_type = read(io, TYPE_OF_ADDRESS_TYPE)
 
     if address_type == ADDRESS_TYPE_IPV4
-        host = Sockets.IPv4(read(io, TYPE_OF_IPV4_HOST))
-        port = read(io, TYPE_OF_IPV4_PORT)
+        host_ipv4 = read(io, TYPE_OF_IPV4_HOST)
+        host_ipv6 = zero(TYPE_OF_IPV6_HOST)
     elseif address_type == ADDRESS_TYPE_IPV6
-        host = Sockets.IPv6(read(io, TYPE_OF_IPV6_HOST))
-        port = read(io, TYPE_OF_IPV6_PORT)
+        host_ipv4 = zero(TYPE_OF_IPV4_HOST)
+        host_ipv6 = read(io, TYPE_OF_IPV6_HOST)
     else
         return nothing
     end
 
-    return NetcodeAddress(Sockets.InetAddr(host, port))
+    port = read(io, TYPE_OF_PORT)
+
+    return NetcodeAddress(address_type, host_ipv4, host_ipv6, port)
 end
 
 function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
