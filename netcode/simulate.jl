@@ -159,14 +159,7 @@ function start_client(auth_server_address, username, password)
 
     socket = Sockets.UDPSocket()
 
-    connection_request_packet = ConnectionRequestPacket(
-        PACKET_TYPE_CONNECTION_REQUEST_PACKET,
-        connect_token_packet.netcode_version_info,
-        connect_token_packet.protocol_id,
-        connect_token_packet.expire_timestamp,
-        connect_token_packet.nonce,
-        connect_token_packet.encrypted_private_connect_token_data,
-    )
+    connection_request_packet = ConnectionRequestPacket(connect_token_packet)
     size_of_connection_request_packet = get_serialized_size(connection_request_packet)
     io_connection_request_packet = IOBuffer(maxsize = size_of_connection_request_packet)
     connection_request_packet_length = write(io_connection_request_packet, connection_request_packet)

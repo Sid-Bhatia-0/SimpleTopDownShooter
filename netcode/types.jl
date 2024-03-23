@@ -185,3 +185,14 @@ function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
         connect_token_info.server_to_client_key,
     )
 end
+
+function ConnectionRequestPacket(connect_token_packet::ConnectTokenPacket)
+    return ConnectionRequestPacket(
+        PACKET_TYPE_CONNECTION_REQUEST_PACKET,
+        connect_token_packet.netcode_version_info,
+        connect_token_packet.protocol_id,
+        connect_token_packet.expire_timestamp,
+        connect_token_packet.nonce,
+        connect_token_packet.encrypted_private_connect_token_data,
+    )
+end
