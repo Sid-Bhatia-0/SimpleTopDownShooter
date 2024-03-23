@@ -16,13 +16,16 @@ mutable struct GameState
     target_ns_per_frame::Int
 end
 
-struct NetcodeInetAddr
-    address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}
+struct NetcodeAddress
+    address_type::TYPE_OF_ADDRESS_TYPE
+    host_ipv4::TYPE_OF_IPV4_HOST
+    host_ipv6::TYPE_OF_IPV6_HOST
+    port::TYPE_OF_PORT
 end
 
 struct ClientSlot
     is_used::Bool
-    netcode_address::NetcodeInetAddr
+    netcode_address::NetcodeAddress
 end
 
 struct ConnectTokenInfo
@@ -33,7 +36,7 @@ struct ConnectTokenInfo
     nonce::Vector{UInt8}
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     client_id::TYPE_OF_CLIENT_ID
-    netcode_addresses::Vector{NetcodeInetAddr}
+    netcode_addresses::Vector{NetcodeAddress}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
@@ -43,7 +46,7 @@ struct PrivateConnectToken
     client_id::TYPE_OF_CLIENT_ID
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     num_server_addresses::TYPE_OF_NUM_SERVER_ADDRESSES
-    netcode_addresses::Vector{NetcodeInetAddr}
+    netcode_addresses::Vector{NetcodeAddress}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
@@ -66,7 +69,7 @@ struct ConnectTokenPacket <: AbstractPacket
     encrypted_private_connect_token_data::Vector{UInt8}
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     num_server_addresses::TYPE_OF_NUM_SERVER_ADDRESSES
-    netcode_addresses::Vector{NetcodeInetAddr}
+    netcode_addresses::Vector{NetcodeAddress}
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
 end
@@ -78,6 +81,36 @@ struct ConnectionRequestPacket <: AbstractPacket
     expire_timestamp::TYPE_OF_TIMESTAMP
     nonce::Vector{UInt8}
     encrypted_private_connect_token_data::Vector{UInt8}
+end
+
+function NetcodeAddress(address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}})
+    if address isa Sockets.InetAddr{Sockets.IPv4}
+        address_type = ADDRESS_TYPE_IPV4
+        host_ipv4 = address.host.host
+        host_ipv6 = zero(TYPE_OF_IPV6_HOST)
+    else
+        address_type = ADDRESS_TYPE_IPV6
+        host_ipv4 = zero(TYPE_OF_IPV4_HOST)
+        host_ipv6 = address.host.host
+    end
+
+    port = address.port
+
+    return NetcodeAddress(address_type, host_ipv4, host_ipv6, port)
+end
+
+is_valid(netcode_address::NetcodeAddress) = netcode_address.address_type == ADDRESS_TYPE_IPV4 || netcode_address.address_type == ADDRESS_TYPE_IPV6
+
+function get_inetaddr(netcode_address::NetcodeAddress)
+    @assert is_valid(netcode_address)
+
+    if netcode_address.address_type == ADDRESS_TYPE_IPV4
+        host = Sockets.IPv4(netcode_address.host_ipv4)
+    else
+        host = Sockets.IPv6(netcode_address.host_ipv6)
+    end
+
+    return Sockets.InetAddr(host, netcode_address.port)
 end
 
 function ConnectTokenInfo(client_id)
@@ -92,7 +125,7 @@ function ConnectTokenInfo(client_id)
         rand(UInt8, SIZE_OF_NONCE),
         TIMEOUT_SECONDS,
         client_id,
-        NetcodeInetAddr.(GAME_SERVER_ADDRESSES),
+        NetcodeAddress.(GAME_SERVER_ADDRESSES),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
@@ -118,10 +151,6 @@ function PrivateConnectTokenAssociatedData(connect_token_info::ConnectTokenInfo)
         connect_token_info.expire_timestamp,
     )
 end
-
-get_address_type(::Sockets.InetAddr{Sockets.IPv4}) = ADDRESS_TYPE_IPV4
-get_address_type(::Sockets.InetAddr{Sockets.IPv6}) = ADDRESS_TYPE_IPV6
-get_address_type(netcode_inetaddr::NetcodeInetAddr) = get_address_type(netcode_inetaddr.address)
 
 function encrypt(message, associated_data, nonce, key)
     ciphertext = zeros(UInt8, length(message) + SIZE_OF_HMAC)

@@ -1,5 +1,3 @@
-import Sockets
-
 const NETCODE_VERSION_INFO = Vector{UInt8}("NETCODE 1.02\0")
 const SIZE_OF_NETCODE_VERSION_INFO = length(NETCODE_VERSION_INFO)
 
@@ -22,15 +20,14 @@ const SIZE_OF_HMAC = 16
 const SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA = 1024
 
 const TYPE_OF_ADDRESS_TYPE = UInt8
-const SIZE_OF_ADDRESS_TYPE = sizeof(TYPE_OF_ADDRESS_TYPE)
 
 const ADDRESS_TYPE_IPV4 = TYPE_OF_ADDRESS_TYPE(1)
-const TYPE_OF_IPV4_HOST = fieldtype(Sockets.IPv4, :host)
-const TYPE_OF_IPV4_PORT = fieldtype(Sockets.InetAddr{Sockets.IPv4}, :port)
+const TYPE_OF_IPV4_HOST = UInt32
 
 const ADDRESS_TYPE_IPV6 = TYPE_OF_ADDRESS_TYPE(2)
-const TYPE_OF_IPV6_HOST = fieldtype(Sockets.IPv6, :host)
-const TYPE_OF_IPV6_PORT = fieldtype(Sockets.InetAddr{Sockets.IPv6}, :port)
+const TYPE_OF_IPV6_HOST = UInt128
+
+const TYPE_OF_PORT = UInt16
 
 const TYPE_OF_NUM_SERVER_ADDRESSES = UInt32
 const MAX_NUM_SERVER_ADDRESSES = 32
