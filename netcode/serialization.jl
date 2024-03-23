@@ -132,13 +132,7 @@ function try_read(io::IO, ::Type{NetcodeAddress})
     return NetcodeAddress(address_type, host_ipv4, host_ipv6, port)
 end
 
-function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
-    if length(data) != SIZE_OF_CONNECT_TOKEN_PACKET
-        return nothing
-    end
-
-    io = IOBuffer(data)
-
+function try_read(io::IO, ::Type{ConnectTokenPacket})
     netcode_version_info = read(io, SIZE_OF_NETCODE_VERSION_INFO)
     if netcode_version_info != NETCODE_VERSION_INFO
         return nothing
@@ -188,7 +182,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
         end
     end
 
-    connect_token_packet = ConnectTokenPacket(
+    return ConnectTokenPacket(
         netcode_version_info,
         protocol_id,
         create_timestamp,
@@ -201,17 +195,9 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
         client_to_server_key,
         server_to_client_key,
     )
-
-    return connect_token_packet
 end
 
-function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
-    if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
-        return nothing
-    end
-
-    io = IOBuffer(data)
-
+function try_read(io::IO, ::Type{ConnectionRequestPacket})
     packet_type = read(io, TYPE_OF_PACKET_TYPE)
     if packet_type != PACKET_TYPE_CONNECTION_REQUEST_PACKET
         return nothing
@@ -236,7 +222,7 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
 
     encrypted_private_connect_token_data = read(io, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
 
-    connection_request_packet = ConnectionRequestPacket(
+    return ConnectionRequestPacket(
         packet_type,
         netcode_version_info,
         protocol_id,
@@ -244,6 +230,4 @@ function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
         nonce,
         encrypted_private_connect_token_data,
     )
-
-    return connection_request_packet
 end
