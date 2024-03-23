@@ -42,6 +42,12 @@ const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(
 const CLIENT_USERNAME = "user1"
 const CLIENT_PASSWORD = "password1"
 
+function pprint(x)
+    GP.pprint(x)
+    println()
+    return nothing
+end
+
 function get_time(reference_time)
     # get time (in units of nanoseconds) since reference_time
     # places an upper bound on how much time can the program be running until time wraps around giving meaningless values
@@ -111,6 +117,7 @@ function start_game_server(game_server_address, room_size)
 
             if !isnothing(connection_request_packet)
                 @info "Received PACKET_TYPE_CONNECTION_REQUEST_PACKET"
+                pprint(connection_request_packet)
 
                 for i in 1:room_size
                     if !room[i].is_used
@@ -165,6 +172,8 @@ function start_client(auth_server_address, username, password)
     connection_request_packet_length = write(io_connection_request_packet, connection_request_packet)
     @assert connection_request_packet_length == size_of_connection_request_packet
 
+    pprint(connection_request_packet)
+
     Sockets.send(socket, game_server_address.host, game_server_address.port, io_connection_request_packet.data)
 
     return nothing
@@ -189,7 +198,7 @@ function auth_handler(request)
                 if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
                     connect_token_info = ConnectTokenInfo(i)
 
-                    GP.pprint(connect_token_info)
+                    pprint(connect_token_info)
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
 
