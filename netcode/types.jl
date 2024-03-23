@@ -187,6 +187,28 @@ function try_decrypt(ciphertext, associated_data, nonce, key)
     return decrypted
 end
 
+function try_decrypt(connection_request_packet::ConnectionRequestPacket, key)
+    decrypted = try_decrypt(
+        connection_request_packet.encrypted_private_connect_token_data,
+        get_serialized_data(PrivateConnectTokenAssociatedData(connection_request_packet)),
+        connection_request_packet.nonce,
+        key,
+    )
+
+    if isnothing(decrypted)
+        return nothing
+    end
+
+    io = IOBuffer(decrypted)
+
+    private_connect_token = try_read(io, PrivateConnectToken)
+    if isnothing(private_connect_token)
+        return nothing
+    end
+
+    return private_connect_token
+end
+
 function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
     message = get_serialized_data(PrivateConnectToken(connect_token_info))
 
