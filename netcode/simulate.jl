@@ -153,16 +153,15 @@ function start_client(auth_server_address, username, password)
         error("Invalid connect token packet received")
     end
 
-    app_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
-
-    @info "Client obtained app_server_address" app_server_address
+    connection_request_packet = ConnectionRequestPacket(connect_token_packet)
+    pprint(connection_request_packet)
 
     socket = Sockets.UDPSocket()
 
-    connection_request_packet = ConnectionRequestPacket(connect_token_packet)
     connection_request_packet_data = get_serialized_data(connection_request_packet)
 
-    pprint(connection_request_packet)
+    app_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
+    @info "Client obtained app_server_address" app_server_address
 
     Sockets.send(socket, app_server_address.host, app_server_address.port, connection_request_packet_data)
 
