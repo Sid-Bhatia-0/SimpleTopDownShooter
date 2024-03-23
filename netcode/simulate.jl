@@ -1,5 +1,6 @@
 import Base64
 import DataFrames as DF
+import GarishPrint as GP
 import HTTP
 import Random
 import SHA
@@ -187,7 +188,8 @@ function auth_handler(request)
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * USER_DATA[i, :salt])) == USER_DATA[i, :hashed_salted_hashed_password]
                     connect_token_info = ConnectTokenInfo(i)
-                    @info "connect_token_info struct data" connect_token_info.netcode_version_info connect_token_info.protocol_id connect_token_info.create_timestamp connect_token_info.expire_timestamp connect_token_info.nonce connect_token_info.timeout_seconds connect_token_info.client_id connect_token_info.netcode_addresses connect_token_info.client_to_server_key connect_token_info.server_to_client_key connect_token_info.user_data SERVER_SIDE_SHARED_KEY SIZE_OF_HMAC SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA SIZE_OF_CONNECT_TOKEN_PACKET
+
+                    GP.pprint(connect_token_info)
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
 
