@@ -231,3 +231,49 @@ function try_read(io::IO, ::Type{ConnectionRequestPacket})
         encrypted_private_connect_token_data,
     )
 end
+
+function try_read(io::IO, ::Type{PrivateConnectToken})
+    client_id = read(io, TYPE_OF_CLIENT_ID)
+
+    timeout_seconds = read(io, TYPE_OF_TIMEOUT_SECONDS)
+
+    num_server_addresses = read(io, TYPE_OF_NUM_SERVER_ADDRESSES)
+    if !(1 <= num_server_addresses <= MAX_NUM_SERVER_ADDRESSES)
+        return nothing
+    end
+
+    netcode_addresses = NetcodeAddress[]
+
+    for i in 1:num_server_addresses
+        netcode_address = try_read(io, NetcodeAddress)
+        if !isnothing(netcode_address)
+            push!(netcode_addresses, netcode_address)
+        else
+            return nothing
+        end
+    end
+
+    client_to_server_key = read(io, SIZE_OF_KEY)
+
+    server_to_client_key = read(io, SIZE_OF_KEY)
+
+    user_data = read(io, SIZE_OF_USER_DATA)
+
+    # TODO(fix): don't read until eof, read only padding size because we can't assume the size of io
+    while !eof(io)
+        x = read(io, UInt8)
+        if x != 0
+            return nothing
+        end
+    end
+
+    return PrivateConnectToken(
+        client_id,
+        timeout_seconds,
+        num_server_addresses,
+        netcode_addresses,
+        client_to_server_key,
+        server_to_client_key,
+        user_data,
+    )
+end
