@@ -121,26 +121,33 @@ function start_app_server(app_server_address, room_size)
             io = IOBuffer(data)
 
             connection_request_packet = try_read(io, ConnectionRequestPacket)
+            if isnothing(connection_request_packet)
+                @info "Invalid connection request packet received"
+                continue
+            end
 
-            if !isnothing(connection_request_packet)
-                @info "Received PACKET_TYPE_CONNECTION_REQUEST_PACKET"
-                pprint(connection_request_packet)
+            pprint(connection_request_packet)
 
-                for i in 1:room_size
-                    if !room[i].is_used
-                        client_slot = ClientSlot(true, NetcodeAddress(client_address))
-                        room[i] = client_slot
-                        @info "Client accepted" client_address
-                        break
-                    end
-                end
+            private_connect_token = try_decrypt(connection_request_packet, SERVER_SIDE_SHARED_KEY)
+            if isnothing(private_connect_token)
+                @info "Invalid connection request packet received"
+                continue
+            end
 
-                if all(client_slot -> client_slot.is_used, room)
-                    @info "Room full" app_server_address room
+            pprint(private_connect_token)
+
+            for i in 1:room_size
+                if !room[i].is_used
+                    client_slot = ClientSlot(true, NetcodeAddress(client_address))
+                    room[i] = client_slot
+                    @info "Client accepted" client_address
                     break
                 end
-            else
-                @info "Received malformed PACKET_TYPE_CONNECTION_REQUEST_PACKET"
+            end
+
+            if all(client_slot -> client_slot.is_used, room)
+                @info "Room full" app_server_address room
+                break
             end
         else
             @info "Received unknown packet type"
