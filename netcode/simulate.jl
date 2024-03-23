@@ -160,14 +160,11 @@ function start_client(auth_server_address, username, password)
     socket = Sockets.UDPSocket()
 
     connection_request_packet = ConnectionRequestPacket(connect_token_packet)
-    size_of_connection_request_packet = get_serialized_size(connection_request_packet)
-    io_connection_request_packet = IOBuffer(maxsize = size_of_connection_request_packet)
-    connection_request_packet_length = write(io_connection_request_packet, connection_request_packet)
-    @assert connection_request_packet_length == size_of_connection_request_packet
+    connection_request_packet_data = get_serialized_data(connection_request_packet)
 
     pprint(connection_request_packet)
 
-    Sockets.send(socket, app_server_address.host, app_server_address.port, io_connection_request_packet.data)
+    Sockets.send(socket, app_server_address.host, app_server_address.port, connection_request_packet_data)
 
     return nothing
 end
