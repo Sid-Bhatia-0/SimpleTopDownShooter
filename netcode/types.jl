@@ -152,6 +152,14 @@ function PrivateConnectTokenAssociatedData(connect_token_info::ConnectTokenInfo)
     )
 end
 
+function PrivateConnectTokenAssociatedData(connection_request_packet::ConnectionRequestPacket)
+    return PrivateConnectTokenAssociatedData(
+        connection_request_packet.netcode_version_info,
+        connection_request_packet.protocol_id,
+        connection_request_packet.expire_timestamp,
+    )
+end
+
 function encrypt(message, associated_data, nonce, key)
     ciphertext = zeros(UInt8, length(message) + SIZE_OF_HMAC)
     ciphertext_length_ref = Ref{UInt}()
