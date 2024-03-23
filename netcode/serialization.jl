@@ -132,13 +132,7 @@ function try_read(io::IO, ::Type{NetcodeAddress})
     return NetcodeAddress(address_type, host_ipv4, host_ipv6, port)
 end
 
-function try_read(data::Vector{UInt8}, ::Type{ConnectTokenPacket})
-    if length(data) != SIZE_OF_CONNECT_TOKEN_PACKET
-        return nothing
-    end
-
-    io = IOBuffer(data)
-
+function try_read(io::IO, ::Type{ConnectTokenPacket})
     netcode_version_info = read(io, SIZE_OF_NETCODE_VERSION_INFO)
     if netcode_version_info != NETCODE_VERSION_INFO
         return nothing

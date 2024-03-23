@@ -148,7 +148,11 @@ function start_client(auth_server_address, username, password)
 
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port))
 
-    connect_token_packet = try_read(copy(response.body), ConnectTokenPacket)
+    if length(response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
+        error("Invalid connect token packet received")
+    end
+
+    connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket)
     if isnothing(connect_token_packet)
         error("Invalid connect token packet received")
     end
