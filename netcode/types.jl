@@ -125,7 +125,7 @@ function ConnectTokenInfo(client_id)
         rand(UInt8, SIZE_OF_NONCE),
         TIMEOUT_SECONDS,
         client_id,
-        NetcodeAddress.(GAME_SERVER_ADDRESSES),
+        NetcodeAddress.(APP_SERVER_ADDRESSES),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),

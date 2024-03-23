@@ -28,13 +28,13 @@ const TIMEOUT_SECONDS = TYPE_OF_TIMEOUT_SECONDS(5)
 
 const CONNECT_TOKEN_EXPIRE_SECONDS = 10
 
-const GAME_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
+const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
 
-const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10001)
+const APP_SERVER_ADDRESSES = [Sockets.InetAddr(Sockets.localhost, 10001)]
 
-const GAME_SERVER_ADDRESSES = [GAME_SERVER_ADDRESS]
+const APP_SERVER_ADDRESS = APP_SERVER_ADDRESSES[1]
 
-@assert 1 <= length(GAME_SERVER_ADDRESSES) <= MAX_NUM_SERVER_ADDRESSES
+@assert 1 <= length(APP_SERVER_ADDRESSES) <= MAX_NUM_SERVER_ADDRESSES
 
 # TODO: salts must be randomly generated during user registration
 const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
@@ -96,12 +96,12 @@ function create_df_debug_info(debug_info)
     )
 end
 
-function start_game_server(game_server_address, room_size)
+function start_app_server(app_server_address, room_size)
     room = fill(NULL_CLIENT_SLOT, room_size)
 
     socket = Sockets.UDPSocket()
 
-    Sockets.bind(socket, game_server_address.host, game_server_address.port)
+    Sockets.bind(socket, app_server_address.host, app_server_address.port)
 
     @info "Server started listening"
 
@@ -129,7 +129,7 @@ function start_game_server(game_server_address, room_size)
                 end
 
                 if all(client_slot -> client_slot.is_used, room)
-                    @info "Room full" game_server_address room
+                    @info "Room full" app_server_address room
                     break
                 end
             else
@@ -153,9 +153,9 @@ function start_client(auth_server_address, username, password)
         error("Invalid connect token packet received")
     end
 
-    game_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
+    app_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
 
-    @info "Client obtained game_server_address" game_server_address
+    @info "Client obtained app_server_address" app_server_address
 
     socket = Sockets.UDPSocket()
 
@@ -174,7 +174,7 @@ function start_client(auth_server_address, username, password)
 
     pprint(connection_request_packet)
 
-    Sockets.send(socket, game_server_address.host, game_server_address.port, io_connection_request_packet.data)
+    Sockets.send(socket, app_server_address.host, app_server_address.port, io_connection_request_packet.data)
 
     return nothing
 end
@@ -250,18 +250,18 @@ function start()
 end
 
 if length(ARGS) == 1
-    if ARGS[1] == "--game_server"
-        @info "Running as game_server" GAME_SERVER_ADDRESS AUTH_SERVER_ADDRESS
+    if ARGS[1] == "--app_server"
+        @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        start_game_server(GAME_SERVER_ADDRESS, ROOM_SIZE)
+        start_app_server(APP_SERVER_ADDRESS, ROOM_SIZE)
 
     elseif ARGS[1] == "--auth_server"
-        @info "Running as auth_server" GAME_SERVER_ADDRESS AUTH_SERVER_ADDRESS
+        @info "Running as auth_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
         start_auth_server(AUTH_SERVER_ADDRESS)
 
     elseif ARGS[1] == "--client"
-        @info "Running as client" GAME_SERVER_ADDRESS AUTH_SERVER_ADDRESS
+        @info "Running as client" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
         start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD)
 
