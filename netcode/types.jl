@@ -172,6 +172,21 @@ function encrypt(message, associated_data, nonce, key)
     return ciphertext
 end
 
+function try_decrypt(ciphertext, associated_data, nonce, key)
+    decrypted = zeros(UInt8, length(ciphertext) - SIZE_OF_HMAC)
+    decrypted_length_ref = Ref{UInt}()
+
+    decrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(decrypted, decrypted_length_ref, C_NULL, ciphertext, length(ciphertext), associated_data, length(associated_data), nonce, key)
+
+    if decrypt_status != 0
+        return nothing
+    end
+
+    @assert decrypted_length_ref[] == length(decrypted)
+
+    return decrypted
+end
+
 function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
     message = get_serialized_data(PrivateConnectToken(connect_token_info))
 
