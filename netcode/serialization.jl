@@ -199,13 +199,7 @@ function try_read(io::IO, ::Type{ConnectTokenPacket})
     return connect_token_packet
 end
 
-function try_read(data::Vector{UInt8}, ::Type{ConnectionRequestPacket})
-    if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
-        return nothing
-    end
-
-    io = IOBuffer(data)
-
+function try_read(io::IO, ::Type{ConnectionRequestPacket})
     packet_type = read(io, TYPE_OF_PACKET_TYPE)
     if packet_type != PACKET_TYPE_CONNECTION_REQUEST_PACKET
         return nothing

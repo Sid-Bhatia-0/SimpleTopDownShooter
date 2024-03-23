@@ -113,7 +113,14 @@ function start_app_server(app_server_address, room_size)
         end
 
         if data[1] == PACKET_TYPE_CONNECTION_REQUEST_PACKET
-            connection_request_packet = try_read(data, ConnectionRequestPacket)
+            if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
+                @info "Invalid connection request packet received"
+                continue
+            end
+
+            io = IOBuffer(data)
+
+            connection_request_packet = try_read(io, ConnectionRequestPacket)
 
             if !isnothing(connection_request_packet)
                 @info "Received PACKET_TYPE_CONNECTION_REQUEST_PACKET"
