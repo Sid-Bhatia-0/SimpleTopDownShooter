@@ -103,6 +103,8 @@ function start_app_server(app_server_address, room_size)
 
     Sockets.bind(socket, app_server_address.host, app_server_address.port)
 
+    app_server_netcode_address = NetcodeAddress(app_server_address)
+
     @info "Server started listening"
 
     while true
@@ -135,6 +137,11 @@ function start_app_server(app_server_address, room_size)
             end
 
             pprint(private_connect_token)
+
+            if !(app_server_netcode_address in private_connect_token.netcode_addresses)
+                @info "Invalid connection request packet received"
+                continue
+            end
 
             for i in 1:room_size
                 if !room[i].is_used
