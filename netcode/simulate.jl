@@ -34,6 +34,10 @@ const APP_SERVER_ADDRESSES = [Sockets.InetAddr(Sockets.localhost, 10001)]
 
 const APP_SERVER_ADDRESS = APP_SERVER_ADDRESSES[1]
 
+const USED_CONNECT_TOKEN_HISTORY_SIZE = ROOM_SIZE
+
+const NULL_CONNECT_TOKEN_SLOT = ConnectTokenSlot(0, UInt8[], NULL_NETCODE_ADDRESS)
+
 @assert 1 <= length(APP_SERVER_ADDRESSES) <= MAX_NUM_SERVER_ADDRESSES
 
 # TODO: salts must be randomly generated during user registration
@@ -114,8 +118,35 @@ function is_client_already_connected(room, client_netcode_address, client_id)
     return false
 end
 
-function start_app_server(app_server_address, room_size)
+function try_add!(used_connect_token_history::Vector{ConnectTokenSlot}, connect_token_slot::ConnectTokenSlot)
+    i_oldest = 1
+    last_seen_timestamp_oldest = used_connect_token_history[i_oldest].last_seen_timestamp
+
+    for i in axes(used_connect_token_history, 1)
+        if used_connect_token_history[i].hmac == connect_token_slot.hmac
+            if used_connect_token_history[i].netcode_address != connect_token_slot.netcode_address
+                return false
+            elseif used_connect_token_history[i].last_seen_timestamp < connect_token_slot.last_seen_timestamp
+                used_connect_token_history[i] = connect_token_slot
+                return true
+            end
+        end
+
+        if last_seen_timestamp_oldest > used_connect_token_history[i].last_seen_timestamp
+            i_oldest = i
+            last_seen_timestamp_oldest = used_connect_token_history[i].last_seen_timestamp
+        end
+    end
+
+    used_connect_token_history[i_oldest] = connect_token_slot
+
+    return true
+end
+
+function start_app_server(app_server_address, room_size, used_connect_token_history_size)
     room = fill(NULL_CLIENT_SLOT, room_size)
+
+    used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
 
     socket = Sockets.UDPSocket()
 
@@ -167,6 +198,15 @@ function start_app_server(app_server_address, room_size)
                 @info "Client already connected"
                 continue
             end
+
+            connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
+
+            if !try_add!(used_connect_token_history, connect_token_slot)
+                @info "connect token already used by another netcode_address"
+                continue
+            end
+
+            pprint(used_connect_token_history)
 
             for i in 1:room_size
                 if !room[i].is_used
@@ -292,7 +332,7 @@ if length(ARGS) == 1
     if ARGS[1] == "--app_server"
         @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        start_app_server(APP_SERVER_ADDRESS, ROOM_SIZE)
+        start_app_server(APP_SERVER_ADDRESS, ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE)
 
     elseif ARGS[1] == "--auth_server"
         @info "Running as auth_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS

@@ -59,6 +59,12 @@ struct PrivateConnectTokenAssociatedData
     expire_timestamp::TYPE_OF_TIMESTAMP
 end
 
+struct ConnectTokenSlot
+    last_seen_timestamp::TYPE_OF_TIMESTAMP
+    hmac::Vector{UInt8} # TODO(perf): can store hash of hmac instead of hmac
+    netcode_address::NetcodeAddress
+end
+
 abstract type AbstractPacket end
 
 struct ConnectTokenPacket <: AbstractPacket
