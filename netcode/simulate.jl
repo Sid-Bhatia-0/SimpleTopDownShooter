@@ -96,6 +96,16 @@ function create_df_debug_info(debug_info)
     )
 end
 
+function is_client_already_connected(room, client_netcode_address)
+    for client_slot in room
+        if client_slot.is_used && client_slot.netcode_address == client_netcode_address
+            return true
+        end
+    end
+
+    return false
+end
+
 function start_app_server(app_server_address, room_size)
     room = fill(NULL_CLIENT_SLOT, room_size)
 
@@ -140,6 +150,13 @@ function start_app_server(app_server_address, room_size)
 
             if !(app_server_netcode_address in private_connect_token.netcode_addresses)
                 @info "Invalid connection request packet received"
+                continue
+            end
+
+            client_netcode_address = NetcodeAddress(client_address)
+
+            if is_client_already_connected(room, client_netcode_address)
+                @info "Client already connected"
                 continue
             end
 
