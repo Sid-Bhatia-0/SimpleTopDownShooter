@@ -26,6 +26,7 @@ end
 struct ClientSlot
     is_used::Bool
     netcode_address::NetcodeAddress
+    client_id::TYPE_OF_CLIENT_ID
 end
 
 struct ConnectTokenInfo

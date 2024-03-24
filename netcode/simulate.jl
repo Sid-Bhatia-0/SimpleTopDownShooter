@@ -14,7 +14,7 @@ include("serialization.jl")
 
 const NULL_NETCODE_ADDRESS = NetcodeAddress(0, 0, 0, 0)
 
-const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
+const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS, 0)
 
 const PROTOCOL_ID = parse(TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
 
@@ -96,10 +96,18 @@ function create_df_debug_info(debug_info)
     )
 end
 
-function is_client_already_connected(room, client_netcode_address)
+function is_client_already_connected(room, client_netcode_address, client_id)
     for client_slot in room
-        if client_slot.is_used && client_slot.netcode_address == client_netcode_address
-            return true
+        if client_slot.is_used
+            if client_slot.netcode_address == client_netcode_address
+                @info "client_netcode_address already connected"
+                return true
+            end
+
+            if client_slot.client_id == client_id
+                @info "client_id already connected"
+                return true
+            end
         end
     end
 
@@ -155,14 +163,14 @@ function start_app_server(app_server_address, room_size)
 
             client_netcode_address = NetcodeAddress(client_address)
 
-            if is_client_already_connected(room, client_netcode_address)
+            if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
                 @info "Client already connected"
                 continue
             end
 
             for i in 1:room_size
                 if !room[i].is_used
-                    client_slot = ClientSlot(true, NetcodeAddress(client_address))
+                    client_slot = ClientSlot(true, NetcodeAddress(client_address), private_connect_token.client_id)
                     room[i] = client_slot
                     @info "Client accepted" client_address
                     break
