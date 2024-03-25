@@ -143,6 +143,17 @@ function try_add!(used_connect_token_history::Vector{ConnectTokenSlot}, connect_
     return true
 end
 
+function try_add!(room::Vector{ClientSlot}, client_slot::ClientSlot)
+    for i in axes(room, 1)
+        if !room[i].is_used
+            room[i] = client_slot
+            return true
+        end
+    end
+
+    return false
+end
+
 function start_app_server(app_server_address, room_size, used_connect_token_history_size)
     room = fill(NULL_CLIENT_SLOT, room_size)
 
@@ -208,14 +219,18 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
             pprint(used_connect_token_history)
 
-            for i in 1:room_size
-                if !room[i].is_used
-                    client_slot = ClientSlot(true, NetcodeAddress(client_address), private_connect_token.client_id)
-                    room[i] = client_slot
-                    @info "Client accepted" client_address
-                    break
-                end
+            client_slot = ClientSlot(true, NetcodeAddress(client_address), private_connect_token.client_id)
+
+            is_client_added = try_add!(room, client_slot)
+
+            if is_client_added
+                @info "Client accepted" client_address
+            else
+                @info "no empty client slots available"
+                continue
             end
+
+            pprint(room)
 
             if all(client_slot -> client_slot.is_used, room)
                 @info "Room full" app_server_address room
