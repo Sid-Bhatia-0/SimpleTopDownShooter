@@ -14,7 +14,7 @@ include("serialization.jl")
 
 const NULL_NETCODE_ADDRESS = NetcodeAddress(0, 0, 0, 0)
 
-const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS)
+const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS, 0)
 
 const PROTOCOL_ID = parse(TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
 
@@ -33,6 +33,10 @@ const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
 const APP_SERVER_ADDRESSES = [Sockets.InetAddr(Sockets.localhost, 10001)]
 
 const APP_SERVER_ADDRESS = APP_SERVER_ADDRESSES[1]
+
+const USED_CONNECT_TOKEN_HISTORY_SIZE = ROOM_SIZE
+
+const NULL_CONNECT_TOKEN_SLOT = ConnectTokenSlot(0, UInt8[], NULL_NETCODE_ADDRESS)
 
 @assert 1 <= length(APP_SERVER_ADDRESSES) <= MAX_NUM_SERVER_ADDRESSES
 
@@ -96,12 +100,70 @@ function create_df_debug_info(debug_info)
     )
 end
 
-function start_app_server(app_server_address, room_size)
+function is_client_already_connected(room, client_netcode_address, client_id)
+    for client_slot in room
+        if client_slot.is_used
+            if client_slot.netcode_address == client_netcode_address
+                @info "client_netcode_address already connected"
+                return true
+            end
+
+            if client_slot.client_id == client_id
+                @info "client_id already connected"
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+function try_add!(used_connect_token_history::Vector{ConnectTokenSlot}, connect_token_slot::ConnectTokenSlot)
+    i_oldest = 1
+    last_seen_timestamp_oldest = used_connect_token_history[i_oldest].last_seen_timestamp
+
+    for i in axes(used_connect_token_history, 1)
+        if used_connect_token_history[i].hmac == connect_token_slot.hmac
+            if used_connect_token_history[i].netcode_address != connect_token_slot.netcode_address
+                return false
+            elseif used_connect_token_history[i].last_seen_timestamp < connect_token_slot.last_seen_timestamp
+                used_connect_token_history[i] = connect_token_slot
+                return true
+            end
+        end
+
+        if last_seen_timestamp_oldest > used_connect_token_history[i].last_seen_timestamp
+            i_oldest = i
+            last_seen_timestamp_oldest = used_connect_token_history[i].last_seen_timestamp
+        end
+    end
+
+    used_connect_token_history[i_oldest] = connect_token_slot
+
+    return true
+end
+
+function try_add!(room::Vector{ClientSlot}, client_slot::ClientSlot)
+    for i in axes(room, 1)
+        if !room[i].is_used
+            room[i] = client_slot
+            return true
+        end
+    end
+
+    return false
+end
+
+function start_app_server(app_server_address, room_size, used_connect_token_history_size)
     room = fill(NULL_CLIENT_SLOT, room_size)
+
+    used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
 
     socket = Sockets.UDPSocket()
 
     Sockets.bind(socket, app_server_address.host, app_server_address.port)
+
+    app_server_netcode_address = NetcodeAddress(app_server_address)
 
     @info "Server started listening"
 
@@ -121,26 +183,58 @@ function start_app_server(app_server_address, room_size)
             io = IOBuffer(data)
 
             connection_request_packet = try_read(io, ConnectionRequestPacket)
+            if isnothing(connection_request_packet)
+                @info "Invalid connection request packet received"
+                continue
+            end
 
-            if !isnothing(connection_request_packet)
-                @info "Received PACKET_TYPE_CONNECTION_REQUEST_PACKET"
-                pprint(connection_request_packet)
+            pprint(connection_request_packet)
 
-                for i in 1:room_size
-                    if !room[i].is_used
-                        client_slot = ClientSlot(true, NetcodeAddress(client_address))
-                        room[i] = client_slot
-                        @info "Client accepted" client_address
-                        break
-                    end
-                end
+            private_connect_token = try_decrypt(connection_request_packet, SERVER_SIDE_SHARED_KEY)
+            if isnothing(private_connect_token)
+                @info "Invalid connection request packet received"
+                continue
+            end
 
-                if all(client_slot -> client_slot.is_used, room)
-                    @info "Room full" app_server_address room
-                    break
-                end
+            pprint(private_connect_token)
+
+            if !(app_server_netcode_address in private_connect_token.netcode_addresses)
+                @info "Invalid connection request packet received"
+                continue
+            end
+
+            client_netcode_address = NetcodeAddress(client_address)
+
+            if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
+                @info "Client already connected"
+                continue
+            end
+
+            connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
+
+            if !try_add!(used_connect_token_history, connect_token_slot)
+                @info "connect token already used by another netcode_address"
+                continue
+            end
+
+            pprint(used_connect_token_history)
+
+            client_slot = ClientSlot(true, NetcodeAddress(client_address), private_connect_token.client_id)
+
+            is_client_added = try_add!(room, client_slot)
+
+            if is_client_added
+                @info "Client accepted" client_address
             else
-                @info "Received malformed PACKET_TYPE_CONNECTION_REQUEST_PACKET"
+                @info "no empty client slots available"
+                continue
+            end
+
+            pprint(room)
+
+            if all(client_slot -> client_slot.is_used, room)
+                @info "Room full" app_server_address room
+                break
             end
         else
             @info "Received unknown packet type"
@@ -253,7 +347,7 @@ if length(ARGS) == 1
     if ARGS[1] == "--app_server"
         @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        start_app_server(APP_SERVER_ADDRESS, ROOM_SIZE)
+        start_app_server(APP_SERVER_ADDRESS, ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE)
 
     elseif ARGS[1] == "--auth_server"
         @info "Running as auth_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS

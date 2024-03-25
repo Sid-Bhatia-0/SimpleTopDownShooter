@@ -26,6 +26,7 @@ end
 struct ClientSlot
     is_used::Bool
     netcode_address::NetcodeAddress
+    client_id::TYPE_OF_CLIENT_ID
 end
 
 struct ConnectTokenInfo
@@ -56,6 +57,12 @@ struct PrivateConnectTokenAssociatedData
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
     expire_timestamp::TYPE_OF_TIMESTAMP
+end
+
+struct ConnectTokenSlot
+    last_seen_timestamp::TYPE_OF_TIMESTAMP
+    hmac::Vector{UInt8} # TODO(perf): can store hash of hmac instead of hmac
+    netcode_address::NetcodeAddress
 end
 
 abstract type AbstractPacket end
@@ -152,6 +159,14 @@ function PrivateConnectTokenAssociatedData(connect_token_info::ConnectTokenInfo)
     )
 end
 
+function PrivateConnectTokenAssociatedData(connection_request_packet::ConnectionRequestPacket)
+    return PrivateConnectTokenAssociatedData(
+        connection_request_packet.netcode_version_info,
+        connection_request_packet.protocol_id,
+        connection_request_packet.expire_timestamp,
+    )
+end
+
 function encrypt(message, associated_data, nonce, key)
     ciphertext = zeros(UInt8, length(message) + SIZE_OF_HMAC)
     ciphertext_length_ref = Ref{UInt}()
@@ -162,6 +177,43 @@ function encrypt(message, associated_data, nonce, key)
     @assert ciphertext_length_ref[] == length(ciphertext)
 
     return ciphertext
+end
+
+function try_decrypt(ciphertext, associated_data, nonce, key)
+    decrypted = zeros(UInt8, length(ciphertext) - SIZE_OF_HMAC)
+    decrypted_length_ref = Ref{UInt}()
+
+    decrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(decrypted, decrypted_length_ref, C_NULL, ciphertext, length(ciphertext), associated_data, length(associated_data), nonce, key)
+
+    if decrypt_status != 0
+        return nothing
+    end
+
+    @assert decrypted_length_ref[] == length(decrypted)
+
+    return decrypted
+end
+
+function try_decrypt(connection_request_packet::ConnectionRequestPacket, key)
+    decrypted = try_decrypt(
+        connection_request_packet.encrypted_private_connect_token_data,
+        get_serialized_data(PrivateConnectTokenAssociatedData(connection_request_packet)),
+        connection_request_packet.nonce,
+        key,
+    )
+
+    if isnothing(decrypted)
+        return nothing
+    end
+
+    io = IOBuffer(decrypted)
+
+    private_connect_token = try_read(io, PrivateConnectToken)
+    if isnothing(private_connect_token)
+        return nothing
+    end
+
+    return private_connect_token
 end
 
 function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
